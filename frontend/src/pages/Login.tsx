@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Shield, GraduationCap, BookOpen, Lock, CheckCircle2 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 import { login } from '../services/authService';
@@ -20,8 +20,15 @@ export default function Login() {
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await login({ email, password });
-            navigate('/dashboard');
+            const userData = await login({ email, password });
+            // Redirect based on role
+            if (userData.role === 'admin') {
+                navigate('/admin/dashboard');
+            } else if (userData.role === 'teacher') {
+                navigate('/teacher/dashboard');
+            } else {
+                navigate('/dashboard'); // Student
+            }
         } catch (err: any) {
             setError(err.response?.data?.message || 'Login failed');
         }
@@ -188,11 +195,8 @@ export default function Login() {
                         </Button>
                     </form>
 
-                    <p className="mt-8 text-center text-sm text-gray-600">
-                        New to SOEMS?{' '}
-                        <Link to="/register" className="font-medium text-primary hover:text-primary-dark">
-                            Create an account
-                        </Link>
+                    <p className="mt-8 text-center text-sm text-gray-500">
+                        Accounts are created by administrators only.
                     </p>
                 </motion.div>
             </div>

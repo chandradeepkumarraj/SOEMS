@@ -85,3 +85,81 @@ export const loginUser = async (req: Request, res: Response) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+// @desc    Setup Admin Security Questions (Admin Only)
+// @route   POST /api/auth/setup-recovery
+// @access  Private (Admin)
+export const setupAdminRecovery = async (req: any, res: Response) => {
+    try {
+        const { questions } = req.body; // Array of { question, answer }
+
+        if (!questions || questions.length !== 3) {
+            return res.status(400).json({ message: 'Please provide exactly 3 security questions' });
+        }
+
+        const user = await User.findById(req.user._id);
+
+        if (!user || user.role !== 'admin') {
+            return res.status(403).json({ message: 'Only admins can set security questions' });
+        }
+
+        // Hash the answers before storing
+        const bcrypt = require('bcryptjs');
+        const hashedQuestions = await Promise.all(
+            questions.map(async (q: any) => ({
+                question: q.question,
+                answer: await bcrypt.hash(q.answer.toLowerCase().trim(), 10),
+            }))
+        );
+
+        user.securityQuestions = hashedQuestions;
+        await user.save();
+
+        res.json({ message: 'Security questions set successfully' });
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Reset Admin Password via Security Questions
+// @route   POST /api/auth/reset-admin-password
+// @access  Public
+export const resetAdminPassword = async (req: Request, res: Response) => {
+    try {
+        const { email, answers, newPassword } = req.body;
+
+        const user = await User.findOne({ email });
+
+        if (!user || user.role !== 'admin') {
+            return res.status(404).json({ message: 'Admin not found' });
+        }
+
+        if (!user.securityQuestions || user.securityQuestions.length !== 3) {
+            return res.status(400).json({ message: 'Security questions not set up' });
+        }
+
+        if (!answers || answers.length !== 3) {
+            return res.status(400).json({ message: 'Please provide answers to all 3 questions' });
+        }
+
+        // Verify all answers
+        const bcrypt = require('bcryptjs');
+        for (let i = 0; i < 3; i++) {
+            const isMatch = await bcrypt.compare(
+                answers[i].toLowerCase().trim(),
+                user.securityQuestions[i].answer
+            );
+            if (!isMatch) {
+                return res.status(401).json({ message: 'Incorrect security answers' });
+            }
+        }
+
+        // Reset password
+        user.password = newPassword;
+        await user.save();
+
+        res.json({ message: 'Password reset successfully' });
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};

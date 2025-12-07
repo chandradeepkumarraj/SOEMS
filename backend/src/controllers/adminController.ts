@@ -166,3 +166,30 @@ export const getSystemStats = async (req: Request, res: Response) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+// @desc    Reset any user's password (Admin only)
+// @route   PUT /api/admin/users/:id/reset-password
+// @access  Private (Admin)
+export const adminResetUserPassword = async (req: Request, res: Response) => {
+    try {
+        const { newPassword } = req.body;
+        const userId = req.params.id;
+
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).json({ message: 'Password must be at least 6 characters' });
+        }
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        user.password = newPassword;
+        await user.save();
+
+        res.json({ message: 'Password reset successfully' });
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};

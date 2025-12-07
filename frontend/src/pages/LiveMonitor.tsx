@@ -3,6 +3,7 @@ import { io, Socket } from 'socket.io-client';
 import { AlertCircle, User, Monitor, ShieldAlert, CheckCircle } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { SOCKET_URL } from '../config';
+import { Link } from 'react-router-dom';
 
 interface StudentSession {
     studentId: string;
@@ -23,13 +24,7 @@ export default function LiveMonitor() {
 
         newSocket.on('connect', () => {
             addLog('Connected to Proctoring Server');
-            // Join a "global-monitor" room if we implemented it, 
-            // or just rely on the fact that existing logic broadcasts to examId rooms. 
-            // For DEMO: we might need to join specific exam rooms or listen to a global admin channel.
-            // Let's assume for now we join a "monitor-all" room or similar if backend supported it.
-            // But since backend emits to `examId`, Admin needs to know active Exam IDs.
-            // ALLOWANCE: For this demo, we'll listen to the events generally if the server broadcasts globally, 
-            // OR we will join a specific test room.
+            // Join a "global-monitor" room if needed
         });
 
         newSocket.on('monitor-exam-start', (data) => {
@@ -69,8 +64,6 @@ export default function LiveMonitor() {
     // Simulation for Demo
     const simulateAlert = () => {
         if (!socket) return;
-        // Ideally this comes from the student client, but we simulate receiving it here or emitting self-loop
-        // If we emit 'proctor-alert' to server, server broadcasts it back.
         const mockStudentId = 'student-' + Math.floor(Math.random() * 1000);
         socket.emit('proctor-alert', {
             examId: 'demo-exam',
@@ -78,22 +71,20 @@ export default function LiveMonitor() {
             alertType: 'Tab Switch',
             message: 'User switched tabs'
         });
-        // Also simulate join for context
         socket.emit('join-room', 'demo-exam');
     };
 
     return (
         <div className="min-h-screen bg-gray-50 p-8">
             <header className="flex justify-between items-center mb-8">
+                <Link to="/admin/dashboard" className="text-blue-600 hover:underline">← Back to Dashboard</Link>
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                         <Monitor className="text-primary" /> Live Proctoring Dashboard
                     </h1>
                     <p className="text-gray-500">Real-time monitoring of active exam sessions.</p>
                 </div>
-                <Button onClick={simulateAlert} variant="outline">
-                    Simulate Alert (Demo)
-                </Button>
+                <Button onClick={simulateAlert} variant="outline">Simulate Alert (Demo)</Button>
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -107,9 +98,7 @@ export default function LiveMonitor() {
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                             {sessions.map(session => (
-                                <div key={session.studentId} className={`p-4 rounded-xl border-l-4 shadow-sm bg-white border-gray-200 relative overflow-hidden ${session.status === 'alert' ? 'border-l-red-500' :
-                                    session.status === 'submitted' ? 'border-l-green-500' : 'border-l-blue-500'
-                                    }`}>
+                                <div key={session.studentId} className={`p-4 rounded-xl border-l-4 shadow-sm bg-white border-gray-200 relative overflow-hidden ${session.status === 'alert' ? 'border-l-red-500' : session.status === 'submitted' ? 'border-l-green-500' : 'border-l-blue-500'}`}>
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="flex items-center gap-2">
                                             <div className="bg-gray-100 p-2 rounded-full">
@@ -120,18 +109,11 @@ export default function LiveMonitor() {
                                         {session.status === 'alert' && <ShieldAlert className="h-5 w-5 text-red-500 animate-pulse" />}
                                         {session.status === 'submitted' && <CheckCircle className="h-5 w-5 text-green-500" />}
                                     </div>
-
                                     <div className="space-y-1">
                                         <p className="text-xs text-gray-500">Exam: {session.examId}</p>
-                                        <p className={`text-xs font-bold uppercase ${session.status === 'alert' ? 'text-red-600' :
-                                            session.status === 'submitted' ? 'text-green-600' : 'text-blue-600'
-                                            }`}>
-                                            {session.status}
-                                        </p>
+                                        <p className={`text-xs font-bold uppercase ${session.status === 'alert' ? 'text-red-600' : session.status === 'submitted' ? 'text-green-600' : 'text-blue-600'}`}>{session.status}</p>
                                         {session.lastAlert && (
-                                            <p className="text-xs text-red-500 mt-2 bg-red-50 p-1 rounded">
-                                                Risk: {session.lastAlert}
-                                            </p>
+                                            <p className="text-xs text-red-500 mt-2 bg-red-50 p-1 rounded">Risk: {session.lastAlert}</p>
                                         )}
                                     </div>
                                 </div>

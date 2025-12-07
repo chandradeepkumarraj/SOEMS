@@ -10,7 +10,9 @@ export interface IUser extends Document {
     bio?: string;
     phoneNumber?: string;
     address?: string;
+    securityQuestions?: Array<{ question: string; answer: string }>;
     matchPassword: (enteredPassword: string) => Promise<boolean>;
+    matchSecurityAnswer: (answer: string, hashedAnswer: string) => Promise<boolean>;
 }
 
 const UserSchema: Schema = new Schema(
@@ -27,6 +29,12 @@ const UserSchema: Schema = new Schema(
         bio: { type: String },
         phoneNumber: { type: String },
         address: { type: String },
+        securityQuestions: [
+            {
+                question: { type: String },
+                answer: { type: String }, // Will be hashed
+            },
+        ],
     },
     { timestamps: true },
 );
@@ -43,6 +51,11 @@ UserSchema.pre<IUser>('save', async function (next) {
 // Match user entered password to hashed password in database
 UserSchema.methods.matchPassword = async function (enteredPassword: string) {
     return await bcrypt.compare(enteredPassword, this.password);
+};
+
+// Match security answer to hashed answer
+UserSchema.methods.matchSecurityAnswer = async function (answer: string, hashedAnswer: string) {
+    return await bcrypt.compare(answer, hashedAnswer);
 };
 
 const User = mongoose.model<IUser>('User', UserSchema);

@@ -32,7 +32,6 @@ function App() {
                 {/* Public & Auth */}
                 <Route path="/" element={<Landing />} />
                 <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
 
                 {/* Student Routes (Wrapped in Layout) */}
                 <Route element={<StudentLayout />}>

@@ -46,3 +46,8 @@ export const getSystemStats = async () => {
     const response = await axios.get(`${API_URL}/system`, { headers: getAuthHeader() });
     return response.data;
 };
+
+export const resetUserPassword = async (userId: string, newPassword: string) => {
+    const response = await axios.put(`${API_URL}/users/${userId}/reset-password`, { newPassword }, { headers: getAuthHeader() });
+    return response.data;
+};

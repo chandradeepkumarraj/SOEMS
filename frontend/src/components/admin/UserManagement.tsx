@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getUsers, deleteUser, createUser, importUsersCode, exportUsersUrl } from '../../services/adminService';
-import { Search, UserPlus, Trash2, Download, Upload, Loader, X, MoreVertical } from 'lucide-react';
+import { getUsers, deleteUser, createUser, importUsersCode, exportUsersUrl, resetUserPassword } from '../../services/adminService';
+import { Search, UserPlus, Trash2, Download, Upload, Loader, X, Key } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 
 export default function UserManagement() {
@@ -53,6 +53,21 @@ export default function UserManagement() {
         }
     };
 
+    const handleResetPassword = async (userId: string, userName: string) => {
+        const newPassword = prompt(`Enter new password for ${userName}:`);
+        if (newPassword && newPassword.length >= 6) {
+            try {
+                await resetUserPassword(userId, newPassword);
+                setMsg({ type: 'success', text: `Password reset for ${userName}` });
+                setTimeout(() => setMsg(null), 3000);
+            } catch (error) {
+                setMsg({ type: 'error', text: 'Failed to reset password' });
+            }
+        } else if (newPassword) {
+            alert('Password must be at least 6 characters');
+        }
+    };
+
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const formData = new FormData();
@@ -90,33 +105,29 @@ export default function UserManagement() {
                     />
                 </div>
                 <div className="flex gap-2">
-                    <a href={exportUsersUrl()} target="_blank" rel="noopener noreferrer">
-                        <Button variant="outline" className="gap-2 text-gray-600">
-                            <Download className="h-4 w-4" /> Export
+                    <Button variant="outline" onClick={() => setShowAddModal(true)}>
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Add User
+                    </Button>
+                    <label className="cursor-pointer">
+                        <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" />
+                        <Button variant="outline" type="button">
+                            <Upload className="h-4 w-4 mr-2" />
+                            Import CSV
                         </Button>
-                    </a>
-                    <div className="relative">
-                        <input
-                            type="file"
-                            accept=".csv"
-                            className="hidden"
-                            id="csv-upload"
-                            onChange={handleFileUpload}
-                        />
-                        <label htmlFor="csv-upload" className="cursor-pointer">
-                            <div className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 gap-2 text-gray-600">
-                                <Upload className="h-4 w-4" /> Import CSV
-                            </div>
-                        </label>
-                    </div>
-                    <Button onClick={() => setShowAddModal(true)} className="gap-2">
-                        <UserPlus className="h-4 w-4" /> Add User
+                    </label>
+                    <Button variant="outline" onClick={async () => {
+                        const url = await exportUsersUrl();
+                        window.location.href = url;
+                    }}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Export
                     </Button>
                 </div>
             </div>
 
             {msg && (
-                <div className={`p-4 rounded-lg ${msg.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                <div className={`p-4 rounded-lg ${msg.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
                     {msg.text}
                 </div>
             )}
@@ -148,21 +159,32 @@ export default function UserManagement() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                                                    user.role === 'teacher' ? 'bg-emerald-100 text-emerald-800' :
-                                                        'bg-blue-100 text-blue-800'
+                                                user.role === 'teacher' ? 'bg-emerald-100 text-emerald-800' :
+                                                    'bg-blue-100 text-blue-800'
                                                 }`}>
                                                 {user.role}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
                                         <td className="px-6 py-4 text-right">
-                                            <button
-                                                onClick={() => handleDelete(user._id)}
-                                                className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-600"
-                                                title="Delete User"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
+                                            <div className="flex justify-end gap-2">
+                                                {user.role !== 'admin' && (
+                                                    <button
+                                                        onClick={() => handleResetPassword(user._id, user.name)}
+                                                        className="p-2 hover:bg-blue-50 rounded-lg text-gray-400 hover:text-blue-600"
+                                                        title="Reset Password"
+                                                    >
+                                                        <Key className="h-4 w-4" />
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => handleDelete(user._id)}
+                                                    className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-600"
+                                                    title="Delete User"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 )) : (

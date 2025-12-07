@@ -1,6 +1,6 @@
 import express from 'express';
 import { protect, admin } from '../middleware/authMiddleware';
-import { getUsers, createUser, deleteUser, importUsers, exportUsers, getSystemStats } from '../controllers/adminController';
+import { getUsers, createUser, deleteUser, importUsers, exportUsers, getSystemStats, adminResetUserPassword } from '../controllers/adminController';
 import multer from 'multer';
 import path from 'path';
 
@@ -46,5 +46,8 @@ router.route('/users/:id')
 
 router.route('/system')
     .get(protect, admin, getSystemStats);
+
+router.route('/users/:id/reset-password')
+    .put(protect, admin, adminResetUserPassword);
 
 export default router;
