@@ -1,23 +1,20 @@
 import { useEffect, useState } from 'react';
-import { Button } from '../components/ui/Button';
-import {
-    LayoutDashboard,
-    BookOpen,
-    FileText,
-    User,
-    LogOut,
-    Bell,
-    Search,
-    Clock
-} from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { getExams } from '../services/examService';
 import { getMyResults } from '../services/resultService';
+import { BookOpen, Clock, Trophy, Target } from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { motion } from 'framer-motion';
 
 export default function Dashboard() {
     const navigate = useNavigate();
-    const [exams, setExams] = useState<any[]>([]);
-    const [results, setResults] = useState<any[]>([]);
+    const { user } = useOutletContext<any>() || {};
+    const [stats, setStats] = useState({
+        completed: 0,
+        avgScore: 0,
+        upcoming: 0
+    });
+    const [nextExam, setNextExam] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -28,10 +25,26 @@ export default function Dashboard() {
                     getMyResults()
                 ]);
 
-                // Filter for published exams only
-                const publishedExams = examsData.filter((exam: any) => exam.status === 'published');
-                setExams(publishedExams);
-                setResults(resultsData);
+                // Safety checks in case API returns unexpected structure
+                const safeExams = Array.isArray(examsData) ? examsData : [];
+                const safeResults = Array.isArray(resultsData) ? resultsData : [];
+
+                const publishedExams = safeExams.filter((e: any) => e.status === 'published');
+                const futureExams = publishedExams.filter((e: any) => new Date(e.startTime) > new Date());
+                // Find the nearest upcoming exam
+                const nearest = futureExams.sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())[0];
+
+                const avg = safeResults.length > 0
+                    ? Math.round(safeResults.reduce((acc: number, r: any) => acc + (r.score / r.totalPoints) * 100, 0) / safeResults.length)
+                    : 0;
+
+                setStats({
+                    completed: safeResults.length,
+                    avgScore: avg,
+                    upcoming: futureExams.length
+                });
+                setNextExam(nearest);
+
             } catch (error) {
                 console.error('Failed to fetch dashboard data:', error);
             } finally {
@@ -41,160 +54,149 @@ export default function Dashboard() {
         fetchData();
     }, []);
 
-    const handleLogout = () => {
-        localStorage.removeItem('user');
-        navigate('/login');
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour < 12) return 'Good Morning';
+        if (hour < 18) return 'Good Afternoon';
+        return 'Good Evening';
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex">
-            {/* Sidebar */}
-            <aside className="w-64 bg-white border-r border-gray-200 fixed h-full z-10">
-                <div className="h-16 flex items-center px-6 border-b border-gray-200">
-                    <span className="text-2xl font-bold text-primary">SOEMS</span>
+        <div className="space-y-8">
+            {/* Welcome Banner */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden"
+            >
+                <div className="relative z-10">
+                    <h1 className="text-3xl font-bold mb-2">
+                        {getGreeting()}, {user?.name?.split(' ')[0] || 'Student'}! 🚀
+                    </h1>
+                    <p className="text-blue-100 text-lg max-w-xl">
+                        "Success is the sum of small efforts, repeated day in and day out."
+                    </p>
+                    <div className="mt-6 flex flex-wrap gap-4">
+                        <Button
+                            className="bg-white text-blue-600 hover:bg-blue-50 border-none"
+                            onClick={() => navigate('/student/exams')}
+                        >
+                            Find Exams
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className="text-white border-white hover:bg-white/10 hover:text-white"
+                            onClick={() => navigate('/student/results')}
+                        >
+                            View Progress
+                        </Button>
+                    </div>
                 </div>
+                {/* Decorative Circles */}
+                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 rounded-full bg-white/10 blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 rounded-full bg-white/10 blur-3xl"></div>
+            </motion.div>
 
-                <nav className="p-4 space-y-1">
-                    <Link to="/dashboard" className="flex items-center gap-3 px-4 py-3 text-primary bg-blue-50 rounded-lg font-medium">
-                        <LayoutDashboard className="h-5 w-5" />
-                        Dashboard
-                    </Link>
-                    <Link to="/exams" className="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-colors">
-                        <FileText className="h-5 w-5" />
-                        My Exams
-                    </Link>
-                    <Link to="/results" className="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-colors">
-                        <BookOpen className="h-5 w-5" />
-                        Results
-                    </Link>
-                    <Link to="/profile" className="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-lg font-medium transition-colors">
-                        <User className="h-5 w-5" />
-                        Profile
-                    </Link>
-                </nav>
+            {/* Stats Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <StatCard
+                    label="Exams Completed"
+                    value={stats.completed}
+                    icon={BookOpen}
+                    color="text-blue-600"
+                    bg="bg-blue-50"
+                    trend="+2 this week"
+                />
+                <StatCard
+                    label="Average Score"
+                    value={`${stats.avgScore}%`}
+                    icon={Trophy}
+                    color="text-yellow-600"
+                    bg="bg-yellow-50"
+                    trend="Top 15%"
+                />
+                <StatCard
+                    label="Upcoming Exams"
+                    value={stats.upcoming}
+                    icon={Target}
+                    color="text-purple-600"
+                    bg="bg-purple-50"
+                    trend="Next in 2 days"
+                />
+            </div>
 
-                <div className="absolute bottom-0 w-full p-4 border-t border-gray-200">
-                    <button
-                        onClick={handleLogout}
-                        className="flex items-center gap-3 px-4 py-3 text-gray-600 hover:text-error hover:bg-red-50 w-full rounded-lg font-medium transition-colors"
-                    >
-                        <LogOut className="h-5 w-5" />
-                        Sign Out
-                    </button>
-                </div>
-            </aside>
-
-            {/* Main Content */}
-            <main className="flex-1 ml-64">
-                {/* Header */}
-                <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-10">
-                    <div className="flex items-center gap-4 w-96">
-                        <div className="relative w-full">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Search exams..."
-                                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/20"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        <button className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-full">
-                            <Bell className="h-5 w-5" />
-                            <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-error rounded-full"></span>
-                        </button>
-                        <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
-                            <div className="text-right hidden sm:block">
-                                <p className="text-sm font-medium text-gray-900">Student</p>
-                                <p className="text-xs text-gray-500">View</p>
-                            </div>
-                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                                ST
-                            </div>
-                        </div>
-                    </div>
-                </header>
-
-                {/* Dashboard Content */}
-                <div className="p-8">
-                    <div className="mb-8">
-                        <h1 className="text-2xl font-bold text-gray-900">Student Dashboard</h1>
-                        <p className="text-gray-600">View and take your assigned exams.</p>
-                    </div>
-
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-gray-500 font-medium">Available Exams</h3>
-                                <span className="p-2 bg-blue-50 text-primary rounded-lg">
-                                    <FileText className="h-5 w-5" />
-                                </span>
-                            </div>
-                            <p className="text-3xl font-bold text-gray-900">{exams.length}</p>
-                            <p className="text-sm text-gray-500 mt-1">Ready to take</p>
-                        </div>
-
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-gray-500 font-medium">Completed</h3>
-                                <span className="p-2 bg-green-50 text-success rounded-lg">
-                                    <BookOpen className="h-5 w-5" />
-                                </span>
-                            </div>
-                            <p className="text-3xl font-bold text-gray-900">{results.length}</p>
-                            <p className="text-sm text-gray-500 mt-1">Exams finished</p>
-                        </div>
-
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-gray-500 font-medium">Avg Score</h3>
-                                <span className="p-2 bg-yellow-50 text-warning rounded-lg">
-                                    <Clock className="h-5 w-5" />
-                                </span>
-                            </div>
-                            <p className="text-3xl font-bold text-gray-900">
-                                {results.length > 0
-                                    ? Math.round(results.reduce((acc, r) => acc + (r.score / r.totalPoints) * 100, 0) / results.length) + '%'
-                                    : 'N/A'}
-                            </p>
-                            <p className="text-sm text-gray-500 mt-1">Overall Performance</p>
-                        </div>
-                    </div>
-
-                    {/* Available Exams List */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                            <h3 className="font-bold text-gray-900">Available Exams</h3>
-                        </div>
-                        <div className="divide-y divide-gray-100">
-                            {loading ? (
-                                <div className="p-6 text-center text-gray-500">Loading exams...</div>
-                            ) : exams.length === 0 ? (
-                                <div className="p-6 text-center text-gray-500">No exams available at the moment.</div>
-                            ) : (
-                                exams.map((exam) => (
-                                    <div key={exam._id} className="p-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                                        <div className="flex items-center gap-4">
-                                            <div className="h-12 w-12 rounded-lg bg-blue-50 flex items-center justify-center text-primary font-bold text-lg">
-                                                {exam.title.charAt(0)}
-                                            </div>
-                                            <div>
-                                                <h4 className="font-semibold text-gray-900">{exam.title}</h4>
-                                                <p className="text-sm text-gray-500">
-                                                    {new Date(exam.startTime).toLocaleDateString()} • {exam.duration} mins
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <Button size="sm" onClick={() => navigate(`/exam/${exam._id}`)}>Start Exam</Button>
+            <div className="grid grid-cols-1 gap-8">
+                {/* Next Up Section - Now Full Width */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <Clock className="h-5 w-5 text-orange-500" /> Up Next
+                    </h2>
+                    {loading ? (
+                        <div className="h-32 bg-gray-50 rounded-lg animate-pulse" />
+                    ) : nextExam ? (
+                        <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 text-white relative overflow-hidden group">
+                            <div className="relative z-10 w-full max-w-2xl">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <p className="text-gray-400 text-sm mb-1">Upcoming Exam</p>
+                                        <h3 className="text-xl font-bold">{nextExam.title}</h3>
                                     </div>
-                                ))
-                            )}
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-4 mb-6">
+                                    <div className="text-sm">
+                                        <span className="block text-gray-400">Duration</span>
+                                        <span className="font-medium">{nextExam.duration} mins</span>
+                                    </div>
+                                    <div className="text-sm">
+                                        <span className="block text-gray-400">Date</span>
+                                        <span className="font-medium">{new Date(nextExam.startTime).toLocaleDateString()}</span>
+                                    </div>
+                                    <div className="text-sm">
+                                        <span className="block text-gray-400">Time</span>
+                                        <span className="font-medium">{new Date(nextExam.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
+                                </div>
+
+                                <Button
+                                    className="bg-white text-gray-900 hover:bg-gray-100"
+                                    onClick={() => navigate(`/exam/${nextExam._id}`)}
+                                >
+                                    Go to Exam Hall
+                                </Button>
+                            </div>
+                            {/* Decorative Icon */}
+                            <div className="absolute right-0 bottom-0 p-6 opacity-10 transform scale-150">
+                                <Clock className="h-32 w-32 text-white" />
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                            <p>No upcoming exams scheduled.</p>
+                            <Button variant="ghost" className="mt-2 text-primary" onClick={() => navigate('/student/exams')}>
+                                Browse All Exams
+                            </Button>
+                        </div>
+                    )}
                 </div>
-            </main>
+            </div>
+        </div>
+    );
+}
+
+function StatCard({ label, value, icon: Icon, color, bg, trend }: any) {
+    return (
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+                <div className={`p-3 rounded-xl ${bg} ${color}`}>
+                    <Icon className="h-6 w-6" />
+                </div>
+                {trend && <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">{trend}</span>}
+            </div>
+            <div>
+                <p className="text-sm text-gray-500 font-medium mb-1">{label}</p>
+                <h3 className="text-2xl font-bold text-gray-900">{value}</h3>
+            </div>
         </div>
     );
 }

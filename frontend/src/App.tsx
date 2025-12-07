@@ -2,29 +2,48 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
+// Student Pages
 import Dashboard from './pages/Dashboard';
+import StudentExams from './pages/StudentExams';
+import StudentResultsList from './pages/StudentResultsList';
+import Profile from './pages/Profile';
+import ExamInterface from './pages/ExamInterface';
+import Results from './pages/Results';
+import StudentLayout from './components/layout/StudentLayout';
+// Teacher Pages
 import TeacherDashboard from './pages/TeacherDashboard';
 import CreateExam from './pages/CreateExam';
 import ExamAnalytics from './pages/ExamAnalytics';
-import AdminDashboard from './pages/AdminDashboard';
-import LiveMonitor from './pages/LiveMonitor';
-import ProctorDetail from './pages/ProctorDetail';
-import ExamInterface from './pages/ExamInterface';
-import Results from './pages/Results';
-import Profile from './pages/Profile';
 import MyExams from './pages/MyExams';
 import TeacherStudents from './pages/TeacherStudents';
 import TeacherLayout from './components/layout/TeacherLayout';
+// Admin Pages
+import AdminDashboard from './pages/AdminDashboard';
+import LiveMonitor from './pages/LiveMonitor';
+import ProctorDetail from './pages/ProctorDetail';
 
 function App() {
     return (
         <Router>
             <Routes>
+                {/* Public & Auth */}
                 <Route path="/" element={<Landing />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/dashboard" element={<Dashboard />} />
+
+                {/* Student Routes (Wrapped in Layout) */}
+                <Route element={<StudentLayout />}>
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/student/exams" element={<StudentExams />} />
+                    <Route path="/student/results" element={<StudentResultsList />} />
+                    <Route path="/results/:examId" element={<Results />} />
+                </Route>
+
+                {/* Exam Interface (Full Screen, No Layout) */}
+                <Route path="/exam/:examId" element={<ExamInterface />} />
+
+                {/* Teacher Routes */}
                 <Route path="/teacher/create-exam" element={<CreateExam />} />
                 <Route path="/teacher" element={<TeacherLayout />}>
                     <Route path="dashboard" element={<TeacherDashboard />} />
@@ -32,11 +51,11 @@ function App() {
                     <Route path="students" element={<TeacherStudents />} />
                     <Route path="analytics/:examId" element={<ExamAnalytics />} />
                 </Route>
+
+                {/* Admin Routes */}
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 <Route path="/admin/monitor" element={<LiveMonitor />} />
                 <Route path="/admin/monitor/:studentId" element={<ProctorDetail />} />
-                <Route path="/exam/:examId" element={<ExamInterface />} />
-                <Route path="/results/:examId" element={<Results />} />
             </Routes>
         </Router>
     );
