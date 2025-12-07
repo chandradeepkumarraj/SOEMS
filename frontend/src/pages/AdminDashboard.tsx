@@ -1,24 +1,35 @@
-import React, { useState } from 'react';
-import { Button } from '../components/ui/Button';
-import { Users, Shield, Activity, Search, MoreVertical, UserPlus, AlertTriangle, CheckCircle, CheckCircle2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Users, Shield, Activity, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import UserManagement from '../components/admin/UserManagement';
+import SystemHealth from '../components/admin/SystemHealth';
+import { getUsers } from '../services/adminService';
 
 export default function AdminDashboard() {
     const [activeTab, setActiveTab] = useState<'users' | 'system'>('users');
+    const [stats, setStats] = useState([
+        { label: 'Total Users', value: '...', icon: Users, color: 'bg-blue-500' },
+        { label: 'Active Exams', value: '...', icon: Activity, color: 'bg-emerald-500' },
+        { label: 'Security Alerts', value: '0', icon: AlertTriangle, color: 'bg-orange-500' },
+    ]);
 
-    const stats = [
-        { label: 'Total Users', value: '2,543', icon: Users, color: 'bg-blue-500' },
-        { label: 'Active Exams', value: '8', icon: Activity, color: 'bg-emerald-500' },
-        { label: 'Security Alerts', value: '3', icon: AlertTriangle, color: 'bg-orange-500' },
-    ];
+    useEffect(() => {
+        fetchStats();
+    }, []);
 
-    const users = [
-        { id: 1, name: 'Alice Johnson', role: 'Student', email: 'alice@soems.edu', status: 'Active' },
-        { id: 2, name: 'Prof. Anderson', role: 'Teacher', email: 'anderson@soems.edu', status: 'Active' },
-        { id: 3, name: 'System Admin', role: 'Admin', email: 'admin@soems.edu', status: 'Active' },
-        { id: 4, name: 'John Doe', role: 'Student', email: 'john@soems.edu', status: 'Suspended' },
-    ];
+    const fetchStats = async () => {
+        try {
+            const usersData = await getUsers();
+            setStats([
+                { label: 'Total Users', value: usersData.length.toString(), icon: Users, color: 'bg-blue-500' },
+                { label: 'System Active', value: 'Online', icon: Activity, color: 'bg-emerald-500' },
+                { label: 'Security Alerts', value: '0', icon: AlertTriangle, color: 'bg-orange-500' },
+            ]);
+        } catch (error) {
+            console.error('Failed to fetch admin stats');
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
@@ -48,7 +59,9 @@ export default function AdminDashboard() {
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${activeTab === 'system' ? 'bg-primary text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                             }`}
                     >
-                        <SettingsIcon className="h-5 w-5" />
+                        <div className="h-5 w-5 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        </div>
                         System Health
                     </button>
                 </nav>
@@ -72,9 +85,6 @@ export default function AdminDashboard() {
                         </h1>
                         <p className="text-gray-500">Overview of system performance and users.</p>
                     </div>
-                    <Button className="gap-2">
-                        <UserPlus className="h-5 w-5" /> Add New User
-                    </Button>
                 </header>
 
                 {/* Stats Grid */}
@@ -99,95 +109,8 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Content Area */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                        <h2 className="text-lg font-bold text-gray-900">All Users</h2>
-                        <div className="relative">
-                            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Search users..."
-                                className="pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary w-64"
-                            />
-                        </div>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead className="bg-gray-50 text-gray-500 text-sm">
-                                <tr>
-                                    <th className="px-6 py-4 font-medium">Name</th>
-                                    <th className="px-6 py-4 font-medium">Role</th>
-                                    <th className="px-6 py-4 font-medium">Email</th>
-                                    <th className="px-6 py-4 font-medium">Status</th>
-                                    <th className="px-6 py-4 font-medium text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {users.map((user) => (
-                                    <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-xs">
-                                                    {user.name.charAt(0)}
-                                                </div>
-                                                <span className="font-medium text-gray-900">{user.name}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.role === 'Admin' ? 'bg-purple-100 text-purple-800' :
-                                                    user.role === 'Teacher' ? 'bg-emerald-100 text-emerald-800' :
-                                                        'bg-blue-100 text-blue-800'
-                                                }`}>
-                                                {user.role}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">
-                                            {user.email}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2 text-sm">
-                                                {user.status === 'Active' ? (
-                                                    <CheckCircle2 className="h-4 w-4 text-success" />
-                                                ) : (
-                                                    <AlertTriangle className="h-4 w-4 text-error" />
-                                                )}
-                                                <span className={user.status === 'Active' ? 'text-gray-900' : 'text-error'}>
-                                                    {user.status}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600">
-                                                <MoreVertical className="h-4 w-4" />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                {activeTab === 'users' ? <UserManagement /> : <SystemHealth />}
             </main>
         </div>
     );
-}
-
-function SettingsIcon(props: any) {
-    return (
-        <svg
-            {...props}
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-            <circle cx="12" cy="12" r="3" />
-        </svg>
-    )
 }

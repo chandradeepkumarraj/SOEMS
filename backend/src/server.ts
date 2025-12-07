@@ -4,15 +4,22 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import connectDB from './config/db';
+import seedAdmin from './utils/seeder';
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
 import questionRoutes from './routes/questionRoutes';
 import examRoutes from './routes/examRoutes';
 import resultRoutes from './routes/resultRoutes';
+import adminRoutes from './routes/adminRoutes';
+import http from 'http';
+import { initSocket } from './socket';
+import fs from 'fs';
 
 dotenv.config();
 
-connectDB();
+connectDB().then(() => {
+    seedAdmin();
+});
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -28,15 +35,12 @@ app.use('/api/users', userRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/exams', examRoutes);
 app.use('/api/results', resultRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Basic Route
 app.get('/', (req: Request, res: Response) => {
     res.send('SOEMS Backend is running!');
 });
-
-import http from 'http';
-import { initSocket } from './socket';
-import fs from 'fs';
 
 const server = http.createServer(app);
 const io = initSocket(server);

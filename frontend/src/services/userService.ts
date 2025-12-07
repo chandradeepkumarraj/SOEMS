@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { getCurrentUser } from './authService';
+import { API_BASE_URL } from '../config';
 
-const API_URL = 'http://127.0.0.1:5001/api/users';
+const API_URL = `${API_BASE_URL}/api/users`;
 
 const getAuthHeader = () => {
     const user = getCurrentUser();

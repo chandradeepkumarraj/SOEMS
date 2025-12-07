@@ -1,101 +1,161 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { io, Socket } from 'socket.io-client';
+import { AlertCircle, User, Monitor, ShieldAlert, CheckCircle } from 'lucide-react';
 import { Button } from '../components/ui/Button';
-import { ArrowLeft, AlertTriangle, Wifi, WifiOff, Eye, Mic, Maximize2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { SOCKET_URL } from '../config';
+
+interface StudentSession {
+    studentId: string;
+    examId: string;
+    status: 'active' | 'submitted' | 'alert';
+    lastAlert?: string;
+    name?: string; // Placeholder for real name mapping
+}
 
 export default function LiveMonitor() {
-    const students = [
-        { id: 1, name: 'Alice Johnson', status: 'Normal', connection: 'Good', lastActivity: 'Just now' },
-        { id: 2, name: 'Bob Smith', status: 'Suspicious', connection: 'Unstable', lastActivity: '1m ago' },
-        { id: 3, name: 'Charlie Brown', status: 'Normal', connection: 'Good', lastActivity: 'Just now' },
-        { id: 4, name: 'Diana Prince', status: 'Disconnected', connection: 'Lost', lastActivity: '5m ago' },
-        { id: 5, name: 'Evan Wright', status: 'Normal', connection: 'Good', lastActivity: 'Just now' },
-        { id: 6, name: 'Fiona Gallagher', status: 'Normal', connection: 'Good', lastActivity: 'Just now' },
-    ];
+    const [socket, setSocket] = useState<Socket | null>(null);
+    const [sessions, setSessions] = useState<StudentSession[]>([]);
+    const [logs, setLogs] = useState<string[]>([]);
+
+    useEffect(() => {
+        const newSocket = io(SOCKET_URL);
+        setSocket(newSocket);
+
+        newSocket.on('connect', () => {
+            addLog('Connected to Proctoring Server');
+            // Join a "global-monitor" room if we implemented it, 
+            // or just rely on the fact that existing logic broadcasts to examId rooms. 
+            // For DEMO: we might need to join specific exam rooms or listen to a global admin channel.
+            // Let's assume for now we join a "monitor-all" room or similar if backend supported it.
+            // But since backend emits to `examId`, Admin needs to know active Exam IDs.
+            // ALLOWANCE: For this demo, we'll listen to the events generally if the server broadcasts globally, 
+            // OR we will join a specific test room.
+        });
+
+        newSocket.on('monitor-exam-start', (data) => {
+            addLog(`Student ${data.studentId} started exam ${data.examId}`);
+            updateSession(data.studentId, data.examId, 'active');
+        });
+
+        newSocket.on('monitor-exam-submit', (data) => {
+            addLog(`Student ${data.studentId} submitted exam ${data.examId}`);
+            updateSession(data.studentId, data.examId, 'submitted');
+        });
+
+        newSocket.on('monitor-proctor-alert', (data) => {
+            addLog(`ALERT: ${data.message} (${data.studentId})`);
+            updateSession(data.studentId, data.examId, 'alert', data.alertType);
+        });
+
+        return () => {
+            newSocket.disconnect();
+        };
+    }, []);
+
+    const addLog = (msg: string) => {
+        setLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 50));
+    };
+
+    const updateSession = (studentId: string, examId: string, status: StudentSession['status'], alert?: string) => {
+        setSessions(prev => {
+            const existing = prev.find(s => s.studentId === studentId);
+            if (existing) {
+                return prev.map(s => s.studentId === studentId ? { ...s, status, lastAlert: alert || s.lastAlert } : s);
+            }
+            return [...prev, { studentId, examId, status, lastAlert: alert }];
+        });
+    };
+
+    // Simulation for Demo
+    const simulateAlert = () => {
+        if (!socket) return;
+        // Ideally this comes from the student client, but we simulate receiving it here or emitting self-loop
+        // If we emit 'proctor-alert' to server, server broadcasts it back.
+        const mockStudentId = 'student-' + Math.floor(Math.random() * 1000);
+        socket.emit('proctor-alert', {
+            examId: 'demo-exam',
+            studentId: mockStudentId,
+            alertType: 'Tab Switch',
+            message: 'User switched tabs'
+        });
+        // Also simulate join for context
+        socket.emit('join-room', 'demo-exam');
+    };
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white p-6">
+        <div className="min-h-screen bg-gray-50 p-8">
             <header className="flex justify-between items-center mb-8">
-                <div className="flex items-center gap-4">
-                    <Link to="/admin/dashboard">
-                        <Button variant="ghost" className="text-gray-400 hover:text-white hover:bg-gray-800 gap-2">
-                            <ArrowLeft className="h-5 w-5" /> Back to Dashboard
-                        </Button>
-                    </Link>
-                    <div className="h-6 w-px bg-gray-700" />
-                    <h1 className="text-xl font-bold flex items-center gap-2">
-                        <span className="h-3 w-3 rounded-full bg-red-500 animate-pulse" />
-                        Live Proctoring Session
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                        <Monitor className="text-primary" /> Live Proctoring Dashboard
                     </h1>
+                    <p className="text-gray-500">Real-time monitoring of active exam sessions.</p>
                 </div>
-                <div className="flex items-center gap-4">
-                    <div className="px-4 py-2 bg-gray-800 rounded-lg flex items-center gap-2 text-sm">
-                        <span className="text-gray-400">Active Students:</span>
-                        <span className="font-bold text-white">42</span>
-                    </div>
-                    <div className="px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-sm text-red-400">
-                        <AlertTriangle className="h-4 w-4" />
-                        <span>3 Alerts</span>
-                    </div>
-                </div>
+                <Button onClick={simulateAlert} variant="outline">
+                    Simulate Alert (Demo)
+                </Button>
             </header>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {students.map((student) => (
-                    <Link to={`/admin/monitor/${student.id}`} key={student.id}>
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className={`relative aspect-video bg-gray-800 rounded-xl overflow-hidden border-2 cursor-pointer transition-all hover:ring-2 hover:ring-primary ${student.status === 'Suspicious' ? 'border-red-500' :
-                                student.status === 'Disconnected' ? 'border-gray-600' :
-                                    'border-transparent'
-                                }`}
-                        >
-                            {/* Mock Video Feed Placeholder */}
-                            <div className="absolute inset-0 bg-gray-700 flex items-center justify-center">
-                                {student.status === 'Disconnected' ? (
-                                    <div className="flex flex-col items-center text-gray-500">
-                                        <WifiOff className="h-8 w-8 mb-2" />
-                                        <span className="text-sm">Signal Lost</span>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Active Grid */}
+                <div className="lg:col-span-2 space-y-6">
+                    <h2 className="font-semibold text-lg">Active Sessions</h2>
+                    {sessions.length === 0 ? (
+                        <div className="bg-white p-12 rounded-xl border border-dashed border-gray-300 text-center text-gray-400">
+                            Waiting for exam activity...
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {sessions.map(session => (
+                                <div key={session.studentId} className={`p-4 rounded-xl border-l-4 shadow-sm bg-white border-gray-200 relative overflow-hidden ${session.status === 'alert' ? 'border-l-red-500' :
+                                    session.status === 'submitted' ? 'border-l-green-500' : 'border-l-blue-500'
+                                    }`}>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <div className="bg-gray-100 p-2 rounded-full">
+                                                <User className="h-4 w-4 text-gray-600" />
+                                            </div>
+                                            <span className="font-medium text-sm">{session.studentId}</span>
+                                        </div>
+                                        {session.status === 'alert' && <ShieldAlert className="h-5 w-5 text-red-500 animate-pulse" />}
+                                        {session.status === 'submitted' && <CheckCircle className="h-5 w-5 text-green-500" />}
                                     </div>
-                                ) : (
-                                    <div className="text-gray-600">
-                                        <Eye className="h-8 w-8 opacity-20" />
-                                    </div>
-                                )}
-                            </div>
 
-                            {/* Overlays */}
-                            <div className="absolute inset-0 p-3 flex flex-col justify-between bg-gradient-to-b from-black/60 via-transparent to-black/60">
-                                <div className="flex justify-between items-start">
-                                    <span className="text-sm font-medium truncate max-w-[120px]">{student.name}</span>
-                                    <div className={`px-2 py-0.5 rounded text-xs font-bold ${student.status === 'Suspicious' ? 'bg-red-500 text-white' :
-                                        student.status === 'Disconnected' ? 'bg-gray-600 text-gray-300' :
-                                            'bg-green-500 text-white'
-                                        }`}>
-                                        {student.status}
+                                    <div className="space-y-1">
+                                        <p className="text-xs text-gray-500">Exam: {session.examId}</p>
+                                        <p className={`text-xs font-bold uppercase ${session.status === 'alert' ? 'text-red-600' :
+                                            session.status === 'submitted' ? 'text-green-600' : 'text-blue-600'
+                                            }`}>
+                                            {session.status}
+                                        </p>
+                                        {session.lastAlert && (
+                                            <p className="text-xs text-red-500 mt-2 bg-red-50 p-1 rounded">
+                                                Risk: {session.lastAlert}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
 
-                                <div className="flex justify-between items-end">
-                                    <div className="flex gap-2">
-                                        <div className="p-1.5 bg-black/40 rounded hover:bg-white/20 cursor-pointer transition-colors">
-                                            <Mic className="h-3 w-3" />
-                                        </div>
-                                        <div className="p-1.5 bg-black/40 rounded hover:bg-white/20 cursor-pointer transition-colors">
-                                            <Maximize2 className="h-3 w-3" />
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-xs text-gray-300">
-                                        <Wifi className="h-3 w-3" />
-                                        {student.connection}
-                                    </div>
-                                </div>
+                {/* Event Log */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 h-[600px] flex flex-col">
+                    <div className="p-4 border-b border-gray-100 bg-gray-50 rounded-t-xl">
+                        <h3 className="font-semibold flex items-center gap-2">
+                            <AlertCircle className="h-4 w-4" /> Live Events Log
+                        </h3>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-sm">
+                        {logs.map((log, i) => (
+                            <div key={i} className="border-b border-gray-100 pb-2 last:border-0 text-gray-600">
+                                {log}
                             </div>
-                        </motion.div>
-                    </Link>
-                ))}
+                        ))}
+                        {logs.length === 0 && <p className="text-center text-gray-400 mt-10">No events yet.</p>}
+                    </div>
+                </div>
             </div>
         </div>
     );

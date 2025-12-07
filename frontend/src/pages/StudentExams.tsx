@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; // No Link needed if using Button navigate
 import { getExams } from '../services/examService';
-import { Search, Clock, Calendar, ArrowRight, AlertCircle } from 'lucide-react';
+import { Search, Clock, Calendar, ArrowRight } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { motion } from 'framer-motion';
 

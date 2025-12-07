@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMyResults } from '../services/resultService';
-import { Search, Trophy, Calendar, CheckCircle2, ChevronRight, BarChart3 } from 'lucide-react';
+import { Search, Trophy, Calendar, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function StudentResultsList() {

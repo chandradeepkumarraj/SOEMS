@@ -1,7 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-
-// In a real app, use environment variable: import.meta.env.VITE_API_URL
-const SOCKET_URL = 'http://localhost:5001';
+import { SOCKET_URL } from '../config';
 
 let socket: Socket | null = null;
 

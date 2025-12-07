@@ -1,7 +1,8 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
+
 // Student Pages
 import Dashboard from './pages/Dashboard';
 import StudentExams from './pages/StudentExams';
@@ -10,6 +11,7 @@ import Profile from './pages/Profile';
 import ExamInterface from './pages/ExamInterface';
 import Results from './pages/Results';
 import StudentLayout from './components/layout/StudentLayout';
+
 // Teacher Pages
 import TeacherDashboard from './pages/TeacherDashboard';
 import CreateExam from './pages/CreateExam';
@@ -17,10 +19,11 @@ import ExamAnalytics from './pages/ExamAnalytics';
 import MyExams from './pages/MyExams';
 import TeacherStudents from './pages/TeacherStudents';
 import TeacherLayout from './components/layout/TeacherLayout';
+
 // Admin Pages
 import AdminDashboard from './pages/AdminDashboard';
 import LiveMonitor from './pages/LiveMonitor';
-import ProctorDetail from './pages/ProctorDetail';
+import UserManagement from './components/admin/UserManagement';
 
 function App() {
     return (
@@ -55,7 +58,9 @@ function App() {
                 {/* Admin Routes */}
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 <Route path="/admin/monitor" element={<LiveMonitor />} />
-                <Route path="/admin/monitor/:studentId" element={<ProctorDetail />} />
+
+                {/* Catch all */}
+                <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </Router>
     );

@@ -4,7 +4,7 @@ import { Clock, ChevronLeft, ChevronRight, Flag, Menu, X, AlertCircle } from 'lu
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getExamById, submitExam } from '../services/examService';
-import { joinExamRoom, emitExamStart } from '../services/socket';
+import { joinExamRoom, emitExamStart, emitExamSubmit } from '../services/socket';
 import { getCurrentUser } from '../services/authService';
 
 export default function ExamInterface() {
@@ -88,6 +88,13 @@ export default function ExamInterface() {
 
             if (examId) {
                 await submitExam(examId, formattedAnswers);
+
+                // Real-time: Notify monitors
+                const user = getCurrentUser();
+                if (user && user._id) {
+                    emitExamSubmit(examId, user._id);
+                }
+
                 alert('Exam submitted successfully!');
                 navigate('/dashboard'); // Or navigate to results page if implemented
             }

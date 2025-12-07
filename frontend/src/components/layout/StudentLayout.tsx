@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FileText, BookOpen, User, LogOut, Menu, X, Bell, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, FileText, BookOpen, User, LogOut, Menu, X, Bell } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { getUserProfile } from '../../services/userService';
 

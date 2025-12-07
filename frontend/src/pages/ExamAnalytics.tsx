@@ -80,14 +80,14 @@ export default function ExamAnalytics() {
             joinExamRoom(examId);
             const socket = getSocket();
 
-            socket.on('student-submitted-exam', () => {
+            socket.on('monitor-exam-submit', () => {
                 console.log('New submission received, refreshing stats...');
                 fetchStats();
             });
 
             return () => {
                 leaveExamRoom(examId);
-                socket.off('student-submitted-exam');
+                socket.off('monitor-exam-submit');
             };
         }
     }, [examId]);
