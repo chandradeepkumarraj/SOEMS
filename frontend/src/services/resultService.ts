@@ -26,3 +26,8 @@ export const getResultsByExam = async (examId: string) => {
     const response = await axios.get(`${API_URL}/exam/${examId}`, { headers: getAuthHeader() });
     return response.data;
 };
+
+export const getResultAnalysis = async (id: string) => {
+    const response = await axios.get(`${API_URL}/${id}/analysis`, { headers: getAuthHeader() });
+    return response.data;
+};

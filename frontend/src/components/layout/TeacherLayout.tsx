@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, FileText, Users, Menu, X, LogOut } from 'lucide-react';
+import { BarChart3, FileText, Users, Menu, X, LogOut, User } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { getUserProfile } from '../../services/userService';
 
@@ -99,11 +99,9 @@ export default function TeacherLayout() {
 
                 <div className="p-4 border-t border-gray-100">
                     <div className="flex items-center gap-3 mb-4">
-                        <img
-                            src={user?.avatarUrl || `https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=random`}
-                            alt="Profile"
-                            className="h-10 w-10 rounded-full object-cover bg-gray-200"
-                        />
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                            {user?.name?.charAt(0) || <User className="h-5 w-5" />}
+                        </div>
                         <div className="overflow-hidden">
                             <p className="text-sm font-medium text-gray-900 truncate">{user?.name || 'Loading...'}</p>
                             <p className="text-xs text-gray-500 truncate">{user?.email}</p>

@@ -1,15 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Shield, User, GraduationCap, BookOpen, Lock, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Shield, GraduationCap, BookOpen, CheckCircle2, ArrowRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 
-import { register } from '../services/authService';
+import { register, getCurrentUser } from '../services/authService';
 
 export default function Register() {
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
+
+    useEffect(() => {
+        const user = getCurrentUser();
+        if (user) {
+            if (user.role === 'admin') navigate('/admin/dashboard');
+            else if (user.role === 'teacher') navigate('/teacher/dashboard');
+            else navigate('/dashboard');
+        }
+    }, [navigate]);
     const [role, setRole] = useState<'student' | 'teacher'>('student');
     const [error, setError] = useState('');
     const [formData, setFormData] = useState({

@@ -9,7 +9,9 @@ import { z } from 'zod';
 // @access  Private
 export const getUserProfile = async (req: any, res: Response) => {
     try {
-        const user = await User.findById(req.user._id);
+        const user = await User.findById(req.user._id)
+            .populate('groupId', 'name')
+            .populate('subgroupId', 'name academicYear');
 
         if (user) {
             res.json({
@@ -17,10 +19,12 @@ export const getUserProfile = async (req: any, res: Response) => {
                 name: user.name,
                 email: user.email,
                 role: user.role,
-                avatarUrl: user.avatarUrl,
-                bio: user.bio,
+                rollNo: user.rollNo,
                 phoneNumber: user.phoneNumber,
                 address: user.address,
+                group: user.groupId,
+                subgroup: user.subgroupId,
+                createdAt: user.createdAt
             });
         } else {
             res.status(404).json({ message: 'User not found' });
@@ -38,28 +42,30 @@ export const updateUserProfile = async (req: any, res: Response) => {
         const user = await User.findById(req.user._id);
 
         if (user) {
-            user.name = req.body.name || user.name;
-            user.email = req.body.email || user.email;
-            user.bio = req.body.bio !== undefined ? req.body.bio : user.bio;
-            user.phoneNumber = req.body.phoneNumber !== undefined ? req.body.phoneNumber : user.phoneNumber;
-            user.address = req.body.address !== undefined ? req.body.address : user.address;
-            user.avatarUrl = req.body.avatarUrl !== undefined ? req.body.avatarUrl : user.avatarUrl;
+            // Restrictions for students
+            if (user.role === 'student') {
+                user.phoneNumber = req.body.phoneNumber !== undefined ? req.body.phoneNumber : user.phoneNumber;
+                // Students cannot change name, email, address, or rollNo via profile page
+            } else {
+                // Teachers/Admins can change more fields
+                user.name = req.body.name || user.name;
+                user.email = req.body.email || user.email;
+                user.phoneNumber = req.body.phoneNumber !== undefined ? req.body.phoneNumber : user.phoneNumber;
+                user.address = req.body.address !== undefined ? req.body.address : user.address;
+                user.bio = req.body.bio !== undefined ? req.body.bio : user.bio;
+            }
 
             if (req.body.password) {
                 user.password = req.body.password;
             }
 
-            const updatedUser = await user.save();
+            const updatedUser = (await user.save()).toObject();
+            delete (updatedUser as any).password;
 
             res.json({
-                _id: updatedUser._id,
-                name: updatedUser.name,
-                email: updatedUser.email,
-                role: updatedUser.role,
-                avatarUrl: updatedUser.avatarUrl,
-                bio: updatedUser.bio,
-                phoneNumber: updatedUser.phoneNumber,
-                address: updatedUser.address,
+                ...updatedUser,
+                group: (user as any).groupId,
+                subgroup: (user as any).subgroupId
             });
         } else {
             res.status(404).json({ message: 'User not found' });
@@ -80,7 +86,7 @@ export const getMyStudents = async (req: any, res: Response) => {
         const examIds = exams.map(e => e._id);
 
         // 2. Get results
-        const results = await Result.find({ examId: { $in: examIds } }).populate('studentId', 'name email avatarUrl');
+        const results = await Result.find({ examId: { $in: examIds } }).populate('studentId', 'name email rollNo');
 
         // 3. Unique students + stats
         const studentStats = new Map();
@@ -93,7 +99,7 @@ export const getMyStudents = async (req: any, res: Response) => {
                     _id: sId,
                     name: r.studentId.name,
                     email: r.studentId.email,
-                    avatarUrl: r.studentId.avatarUrl,
+                    rollNo: r.studentId.rollNo,
                     examsTaken: 0,
                     totalScore: 0,
                     totalPoints: 0

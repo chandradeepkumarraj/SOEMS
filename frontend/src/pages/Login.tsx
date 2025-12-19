@@ -1,14 +1,23 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Shield, GraduationCap, BookOpen, Lock, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
-import { login } from '../services/authService';
+import { login, getCurrentUser } from '../services/authService';
 
 export default function Login() {
     const navigate = useNavigate();
+
+    useEffect(() => {
+        const user = getCurrentUser();
+        if (user) {
+            if (user.role === 'admin') navigate('/admin/dashboard');
+            else if (user.role === 'teacher') navigate('/teacher/dashboard');
+            else navigate('/dashboard');
+        }
+    }, [navigate]);
     const [role, setRole] = useState<'student' | 'teacher' | 'admin' | 'proctor'>('student');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');

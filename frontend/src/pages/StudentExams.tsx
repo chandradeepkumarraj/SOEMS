@@ -78,8 +78,17 @@ export default function StudentExams() {
                                     <div className="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold group-hover:scale-110 transition-transform duration-300">
                                         {exam.title.charAt(0)}
                                     </div>
-                                    <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                        Active
+                                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${exam.studentStatus === 'completed' ? 'bg-green-100 text-green-700' :
+                                            exam.studentStatus === 'in-progress' ? 'bg-blue-100 text-blue-700' :
+                                                new Date() < new Date(exam.startTime) ? 'bg-yellow-100 text-yellow-700' :
+                                                    new Date() > new Date(exam.endTime) ? 'bg-red-100 text-red-700' :
+                                                        'bg-green-100 text-green-700'
+                                        }`}>
+                                        {exam.studentStatus === 'completed' ? 'Completed' :
+                                            exam.studentStatus === 'in-progress' ? 'In Progress' :
+                                                new Date() < new Date(exam.startTime) ? 'Upcoming' :
+                                                    new Date() > new Date(exam.endTime) ? 'Expired' :
+                                                        'Active'}
                                     </span>
                                 </div>
 
@@ -103,12 +112,25 @@ export default function StudentExams() {
                             </div>
 
                             <div className="p-4 bg-gray-50 border-t border-gray-100">
-                                <Button
-                                    className="w-full justify-center group-hover:bg-primary group-hover:text-white"
-                                    onClick={() => navigate(`/exam/${exam._id}`)}
-                                >
-                                    Start Exam <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                                </Button>
+                                {exam.studentStatus === 'completed' ? (
+                                    <Button
+                                        className="w-full justify-center bg-green-600 hover:bg-green-700"
+                                        onClick={() => navigate(`/results/${exam._id}`)}
+                                        disabled={!exam.resultsPublished}
+                                    >
+                                        {exam.resultsPublished ? 'View Results' : 'Results Pending'}
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        className={`w-full justify-center group-hover:bg-primary group-hover:text-white ${exam.studentStatus === 'in-progress' ? 'bg-blue-600' : ''
+                                            }`}
+                                        onClick={() => navigate(`/exam/${exam._id}`)}
+                                        disabled={new Date() > new Date(exam.endTime)}
+                                    >
+                                        {exam.studentStatus === 'in-progress' ? 'Resume Exam' : 'Start Exam'}
+                                        <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                                    </Button>
+                                )}
                             </div>
                         </motion.div>
                     ))}

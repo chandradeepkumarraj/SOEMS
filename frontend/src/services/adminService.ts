@@ -29,10 +29,7 @@ export const deleteUser = async (id: string) => {
 
 export const importUsersCode = async (formData: FormData) => {
     const response = await axios.post(`${API_URL}/users/import`, formData, {
-        headers: {
-            ...getAuthHeader(),
-            'Content-Type': 'multipart/form-data'
-        }
+        headers: getAuthHeader()
     });
     return response.data;
 };
@@ -47,7 +44,40 @@ export const getSystemStats = async () => {
     return response.data;
 };
 
+const GROUP_API_URL = `${API_BASE_URL}/api/groups`;
+
+export const getGroups = async () => {
+    const response = await axios.get(GROUP_API_URL, { headers: getAuthHeader() });
+    return response.data;
+};
+
+export const createGroup = async (groupData: any) => {
+    const response = await axios.post(GROUP_API_URL, groupData, { headers: getAuthHeader() });
+    return response.data;
+};
+
+export const getSubgroups = async (groupId?: string) => {
+    const url = groupId ? `${GROUP_API_URL}/subgroups?groupId=${groupId}` : `${GROUP_API_URL}/subgroups`;
+    const response = await axios.get(url, { headers: getAuthHeader() });
+    return response.data;
+};
+
+export const createSubgroup = async (subgroupData: any) => {
+    const response = await axios.post(`${GROUP_API_URL}/subgroups`, subgroupData, { headers: getAuthHeader() });
+    return response.data;
+};
+
 export const resetUserPassword = async (userId: string, newPassword: string) => {
     const response = await axios.put(`${API_URL}/users/${userId}/reset-password`, { newPassword }, { headers: getAuthHeader() });
+    return response.data;
+};
+
+export const deleteGroup = async (id: string) => {
+    const response = await axios.delete(`${GROUP_API_URL}/${id}`, { headers: getAuthHeader() });
+    return response.data;
+};
+
+export const deleteSubgroup = async (id: string) => {
+    const response = await axios.delete(`${GROUP_API_URL}/subgroups/${id}`, { headers: getAuthHeader() });
     return response.data;
 };

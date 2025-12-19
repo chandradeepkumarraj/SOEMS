@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Button } from '../components/ui/Button';
-import { Plus, Users, FileText, BarChart3, Search, Calendar, Trash2, Pencil, Download, Share2 } from 'lucide-react';
+import { Plus, Users, FileText, BarChart3, Search, Calendar, Trash2, Pencil, Download, StopCircle } from 'lucide-react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { getExams, getTeacherDashboardStats, deleteExam } from '../services/examService';
+import { getExams, getTeacherDashboardStats, deleteExam, endExam } from '../services/examService';
 import { getResultsByExam } from '../services/resultService';
 
 export default function TeacherDashboard() {
@@ -66,11 +66,18 @@ export default function TeacherDashboard() {
         }
     };
 
-    const handleShare = (examId: string) => {
-        const link = `${window.location.origin}/teacher/analytics/${examId}`;
-        navigator.clipboard.writeText(link)
-            .then(() => alert('Analytics link copied to clipboard!'))
-            .catch(() => alert('Failed to copy link.'));
+
+    const handleEndExam = async (examId: string) => {
+        if (!window.confirm('Are you sure you want to end this exam now? No student will be able to join after this.')) return;
+        try {
+            await endExam(examId);
+            alert('Exam ended successfully');
+            const data = await getExams();
+            setExams(data);
+        } catch (error) {
+            console.error('Failed to end exam:', error);
+            alert('Failed to end exam');
+        }
     };
 
     useEffect(() => {
@@ -107,7 +114,7 @@ export default function TeacherDashboard() {
                             alt="Profile"
                             className="w-24 h-24 rounded-full object-cover border-4 border-gray-50 bg-gray-200"
                         />
-                        <Link to="/profile" className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow border border-gray-100 hover:bg-gray-50 text-gray-500 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity" title="Edit Photo">
+                        <Link to="/teacher/profile" className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow border border-gray-100 hover:bg-gray-50 text-gray-500 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity" title="Edit Photo">
                             <Pencil className="h-4 w-4" />
                         </Link>
                     </div>
@@ -129,7 +136,7 @@ export default function TeacherDashboard() {
                             Create New Exam
                         </Button>
                     </Link>
-                    <Link to="/profile">
+                    <Link to="/teacher/profile">
                         <Button variant="outline">
                             <Pencil className="mr-2 h-4 w-4" />
                             Edit Profile
@@ -222,13 +229,15 @@ export default function TeacherDashboard() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex justify-end gap-2">
-                                                <button
-                                                    onClick={() => handleShare(exam._id)}
-                                                    className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-blue-600"
-                                                    title="Share Analytics Link"
-                                                >
-                                                    <Share2 className="h-4 w-4" />
-                                                </button>
+                                                {exam.status === 'published' && (
+                                                    <button
+                                                        onClick={() => handleEndExam(exam._id)}
+                                                        className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-error"
+                                                        title="Stop Exam Manually"
+                                                    >
+                                                        <StopCircle className="h-4 w-4" />
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={() => handleDownloadReport(exam._id, exam.title)}
                                                     className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-green-600"

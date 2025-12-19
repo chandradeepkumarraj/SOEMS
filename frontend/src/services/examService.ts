@@ -51,3 +51,22 @@ export const getTeacherDashboardStats = async () => {
     const response = await axios.get(`${API_URL}/teacher-stats`, { headers: getAuthHeader() });
     return response.data;
 };
+
+export const startExamSession = async (id: string) => {
+    const response = await axios.post(`${API_URL}/start/${id}`, {}, { headers: getAuthHeader() });
+    return response.data;
+};
+
+export const updateExamProgress = async (id: string, answers: any, timeSpent: any) => {
+    const response = await axios.post(`${API_URL}/progress/${id}`, { answers, timeSpent }, { headers: getAuthHeader() });
+    return response.data;
+};
+export const endExam = async (id: string) => {
+    const response = await axios.post(`${API_URL}/${id}/end`, {}, { headers: getAuthHeader() });
+    return response.data;
+};
+
+export const getExamAnalytics = async (id: string) => {
+    const response = await axios.get(`${API_URL}/${id}/analytics`, { headers: getAuthHeader() });
+    return response.data;
+};

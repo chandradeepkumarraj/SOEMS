@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../components/ui/Button';
 import { Clock, ChevronLeft, ChevronRight, Flag, Menu, X, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getExamById, submitExam } from '../services/examService';
-import { joinExamRoom, emitExamStart, emitExamSubmit } from '../services/socket';
+import { getExamById, submitExam, startExamSession, updateExamProgress } from '../services/examService';
+import { joinExamRoom, emitExamStart, emitExamSubmit, onExamClosedManually } from '../services/socket';
 import { getCurrentUser } from '../services/authService';
 
 export default function ExamInterface() {
@@ -19,71 +19,16 @@ export default function ExamInterface() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [showSubmitModal, setShowSubmitModal] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [questionTimeSpent, setQuestionTimeSpent] = useState<Record<string, number>>({});
+    const [currentQuestionStartTime, setCurrentQuestionStartTime] = useState<number>(Date.now());
 
-    useEffect(() => {
-        if (examId) {
-            const user = getCurrentUser();
-            joinExamRoom(examId);
-            if (user && user._id) {
-                emitExamStart(examId, user._id);
-            }
-        }
-    }, [examId]);
-
-    useEffect(() => {
-        const fetchExam = async () => {
-            try {
-                if (!examId) return;
-                const data = await getExamById(examId);
-                setExam(data);
-                setTimeLeft(data.duration * 60);
-            } catch (error) {
-                console.error('Failed to fetch exam:', error);
-                alert('Failed to load exam.');
-                navigate('/dashboard');
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchExam();
-    }, [examId, navigate]);
-
-    useEffect(() => {
-        if (!exam) return;
-        const timer = setInterval(() => {
-            setTimeLeft((prev) => {
-                if (prev <= 1) {
-                    clearInterval(timer);
-                    handleSubmit(); // Auto-submit
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-        return () => clearInterval(timer);
-    }, [exam]);
-
-    const formatTime = (seconds: number) => {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        const s = seconds % 60;
-        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    };
-
-    const handleAnswerSelect = (questionId: string, optionIndex: number) => {
-        setAnswers((prev) => ({ ...prev, [questionId]: optionIndex }));
-    };
-
-    const toggleFlag = (questionId: string) => {
-        setFlagged((prev) => ({ ...prev, [questionId]: !prev[questionId] }));
-    };
-
-    const handleSubmit = async () => {
+    const handleSubmit = useCallback(async () => {
         setSubmitting(true);
         try {
             const formattedAnswers = Object.entries(answers).map(([qId, optIdx]) => ({
                 questionId: qId,
-                selectedOption: optIdx
+                selectedOption: optIdx,
+                timeSpent: questionTimeSpent[qId] || 0
             }));
 
             if (examId) {
@@ -96,7 +41,7 @@ export default function ExamInterface() {
                 }
 
                 alert('Exam submitted successfully!');
-                navigate('/dashboard'); // Or navigate to results page if implemented
+                navigate('/dashboard');
             }
         } catch (error) {
             console.error('Failed to submit exam:', error);
@@ -104,7 +49,138 @@ export default function ExamInterface() {
             setSubmitting(false);
             setShowSubmitModal(false);
         }
+    }, [examId, answers, navigate]);
+
+    useEffect(() => {
+        if (!examId) return;
+
+        const user = getCurrentUser();
+        joinExamRoom(examId);
+        if (user && user._id) {
+            emitExamStart(examId, user._id);
+        }
+
+        // Socket listener for manual termination
+        const cleanup = onExamClosedManually(({ examId: closedId }) => {
+            if (closedId === examId) {
+                alert('This exam has been ended by the teacher. Your current progress will be submitted automatically.');
+                handleSubmit();
+            }
+        });
+
+        return cleanup;
+    }, [examId, handleSubmit]);
+
+    useEffect(() => {
+        const fetchExamAndSession = async () => {
+            try {
+                if (!examId) return;
+
+                // 1. Get Exam Data
+                const data = await getExamById(examId);
+                setExam(data);
+
+                // 2. Start/Resume Session
+                const session = await startExamSession(examId);
+
+                // 3. Load progress
+                if (session.answers) {
+                    setAnswers(session.answers);
+                }
+
+                // Calculate time left from start time and duration, synced with server
+                const serverNow = new Date(session.serverTime).getTime();
+                const start = new Date(session.startTime).getTime();
+                const elapsedSeconds = Math.floor((serverNow - start) / 1000);
+                const totalDurationSeconds = data.duration * 60;
+                const remaining = Math.max(0, totalDurationSeconds - elapsedSeconds);
+
+                setTimeLeft(remaining);
+
+                if (remaining <= 0) {
+                    alert('Time for this exam has already expired.');
+                    navigate('/dashboard');
+                }
+
+            } catch (error: any) {
+                console.error('Failed to load exam session:', error);
+                alert(error.response?.data?.message || 'Failed to load exam.');
+                navigate('/dashboard');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchExamAndSession();
+    }, [examId, navigate]);
+
+    useEffect(() => {
+        if (!exam || !examId) return;
+
+        // 1. Timer loop
+        const timer = setInterval(() => {
+            setTimeLeft((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    handleSubmit(); // Auto-submit
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        // 2. Periodic Progress Sync (every 30 seconds)
+        const syncInterval = setInterval(() => {
+            if (Object.keys(answers).length > 0) {
+                updateExamProgress(examId, answers, questionTimeSpent).catch(console.error);
+            }
+        }, 30000);
+
+        return () => {
+            clearInterval(timer);
+            clearInterval(syncInterval);
+        };
+    }, [exam, examId, answers]);
+
+    const formatTime = (seconds: number) => {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     };
+
+    const updateTimeSpent = useCallback(() => {
+        if (!exam || !exam.questions[currentQuestionIndex]) return;
+        const qId = exam.questions[currentQuestionIndex]._id;
+        const now = Date.now();
+        const elapsed = Math.floor((now - currentQuestionStartTime) / 1000);
+
+        setQuestionTimeSpent(prev => ({
+            ...prev,
+            [qId]: (prev[qId] || 0) + elapsed
+        }));
+        setCurrentQuestionStartTime(now);
+    }, [exam, currentQuestionIndex, currentQuestionStartTime]);
+
+    const handleAnswerSelect = (questionId: string, optionIndex: number) => {
+        setAnswers((prev) => {
+            const newAnswers = { ...prev, [questionId]: optionIndex };
+            if (examId) {
+                updateExamProgress(examId, newAnswers, questionTimeSpent).catch(console.error);
+            }
+            return newAnswers;
+        });
+    };
+
+    const handleQuestionChange = (newIndex: number) => {
+        updateTimeSpent();
+        setCurrentQuestionIndex(newIndex);
+        if (window.innerWidth < 1024) setIsSidebarOpen(false);
+    };
+
+    const toggleFlag = (questionId: string) => {
+        setFlagged((prev) => ({ ...prev, [questionId]: !prev[questionId] }));
+    };
+
 
     if (loading) {
         return <div className="min-h-screen flex items-center justify-center">Loading Exam...</div>;
@@ -179,10 +255,7 @@ export default function ExamInterface() {
                                         return (
                                             <button
                                                 key={q._id}
-                                                onClick={() => {
-                                                    setCurrentQuestionIndex(idx);
-                                                    if (window.innerWidth < 1024) setIsSidebarOpen(false);
-                                                }}
+                                                onClick={() => handleQuestionChange(idx)}
                                                 className={`relative h-10 w-10 rounded-lg font-medium text-sm flex items-center justify-center transition-all ${isCurrent
                                                     ? 'bg-primary text-white ring-2 ring-primary ring-offset-2'
                                                     : isAnswered
@@ -281,7 +354,7 @@ export default function ExamInterface() {
                         <div className="flex justify-between items-center mt-8">
                             <Button
                                 variant="outline"
-                                onClick={() => setCurrentQuestionIndex((prev) => Math.max(0, prev - 1))}
+                                onClick={() => handleQuestionChange(Math.max(0, currentQuestionIndex - 1))}
                                 disabled={currentQuestionIndex === 0}
                                 className="gap-2"
                             >
@@ -299,7 +372,7 @@ export default function ExamInterface() {
                             ) : (
                                 <Button
                                     variant="primary"
-                                    onClick={() => setCurrentQuestionIndex((prev) => Math.min(exam.questions.length - 1, prev + 1))}
+                                    onClick={() => handleQuestionChange(Math.min(exam.questions.length - 1, currentQuestionIndex + 1))}
                                     className="gap-2"
                                 >
                                     Next <ChevronRight className="h-5 w-5" />

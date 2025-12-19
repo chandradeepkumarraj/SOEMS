@@ -47,3 +47,96 @@ export const getResultById = async (req: Request, res: Response) => {
         res.status(500).json({ message: error.message });
     }
 };
+// @desc    Get detailed analysis for a specific result
+// @route   GET /api/results/:id/analysis
+// @access  Private
+export const getResultAnalysis = async (req: any, res: Response) => {
+    try {
+        const result = await Result.findById(req.params.id)
+            .populate('examId', 'title status')
+            .populate('answers.questionId', 'text subject difficulty');
+
+        if (!result) {
+            return res.status(404).json({ message: 'Result not found' });
+        }
+
+        // 1. Topic-wise Performance
+        const topicStats: Record<string, { total: number, correct: number }> = {};
+
+        result.answers.forEach((ans: any) => {
+            if (!ans.questionId) return;
+            const topic = (ans.questionId as any).subject?.trim() || 'General';
+            if (!topicStats[topic]) topicStats[topic] = { total: 0, correct: 0 };
+            topicStats[topic].total++;
+            if (ans.isCorrect) topicStats[topic].correct++;
+        });
+
+        const topicPerformance = Object.entries(topicStats).map(([topic, stats]) => ({
+            topic,
+            accuracy: stats.total > 0 ? (stats.correct / stats.total) * 100 : 0,
+            totalQuestions: stats.total
+        }));
+
+        // 2. Peer Comparison & Rank
+        const examObj = result.examId as any;
+        const examId = examObj._id || examObj;
+        const examStatus = examObj.status || 'published';
+        const isClosed = examStatus === 'closed';
+
+        const allResultsForExam = await Result.find({ examId }).sort({ score: -1, submittedAt: 1 });
+        const totalExams = allResultsForExam.length;
+        const totalScoreSum = allResultsForExam.reduce((sum, r) => sum + r.score, 0);
+        const examAverage = totalExams > 0 ? (totalScoreSum / totalExams) : 0;
+
+        // Calculate Rank and Percentile ALWAYS for correctness, 
+        // but UI can decide whether to show detailed position.
+        const rankIndex = allResultsForExam.findIndex(r => r._id.toString() === result._id.toString());
+        const classRank = rankIndex !== -1 ? rankIndex + 1 : null;
+        const studentsBeaten = allResultsForExam.filter(r => r.score < result.score).length;
+        const percentile = totalExams > 0 ? (studentsBeaten / totalExams) * 100 : 0;
+
+        let peerGapQuestions: any[] = [];
+        if (isClosed) {
+            // 3. Questions missed by this student but correct for most others (>60%)
+            const questionPassRates: Record<string, { correct: number, total: number }> = {};
+
+            allResultsForExam.forEach(res => {
+                res.answers.forEach(ans => {
+                    if (!ans.questionId) return;
+                    const qId = ans.questionId.toString();
+                    if (!questionPassRates[qId]) questionPassRates[qId] = { correct: 0, total: 0 };
+                    questionPassRates[qId].total++;
+                    if (ans.isCorrect) questionPassRates[qId].correct++;
+                });
+            });
+
+            result.answers.forEach((ans: any) => {
+                if (!ans.isCorrect && ans.questionId) {
+                    const stats = questionPassRates[ans.questionId._id.toString()];
+                    if (stats && (stats.correct / stats.total) > 0.6) {
+                        peerGapQuestions.push({
+                            text: (ans.questionId as any).text,
+                            globalAccuracy: (stats.correct / stats.total) * 100
+                        });
+                    }
+                }
+            });
+        }
+
+        res.json({
+            examTitle: examObj.title || 'Exam',
+            examStatus,
+            score: result.score,
+            totalPoints: result.totalPoints,
+            topicPerformance,
+            examAverage,
+            percentile: Math.round(percentile),
+            totalParticipants: totalExams,
+            classRank,
+            peerGapQuestions,
+            isInsightsAvailable: isClosed
+        });
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};

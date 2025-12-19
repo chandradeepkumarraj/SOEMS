@@ -8,7 +8,10 @@ export interface IExam extends Document {
     startTime: Date;
     endTime: Date;
     creatorId: mongoose.Schema.Types.ObjectId;
-    status: 'draft' | 'published' | 'archived';
+    status: 'draft' | 'published' | 'archived' | 'closed';
+    resultsPublished: boolean;
+    allowedGroups?: mongoose.Types.ObjectId[];
+    allowedSubgroups?: mongoose.Types.ObjectId[];
     createdAt: Date;
     updatedAt: Date;
 }
@@ -23,9 +26,12 @@ const ExamSchema: Schema = new Schema({
     creatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     status: {
         type: String,
-        enum: ['draft', 'published', 'archived'],
+        enum: ['draft', 'published', 'archived', 'closed'],
         default: 'draft'
-    }
+    },
+    resultsPublished: { type: Boolean, default: false },
+    allowedGroups: [{ type: Schema.Types.ObjectId, ref: 'Group' }],
+    allowedSubgroups: [{ type: Schema.Types.ObjectId, ref: 'Subgroup' }]
 }, {
     timestamps: true
 });

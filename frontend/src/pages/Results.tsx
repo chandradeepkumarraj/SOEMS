@@ -1,22 +1,81 @@
 import { useEffect, useState } from 'react';
 import { Button } from '../components/ui/Button';
-import { CheckCircle, XCircle, ArrowLeft, Share2, Download } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { getResultById } from '../services/resultService';
+import { getResultById, getResultAnalysis } from '../services/resultService';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts';
+import { CheckCircle, XCircle, ArrowLeft, Download, Target, TrendingUp, Award } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 export default function Results() {
     const { id } = useParams();
     const [result, setResult] = useState<any>(null);
+    const [analysis, setAnalysis] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isPrinting, setIsPrinting] = useState(false);
+
+    const handleDownloadPDF = async () => {
+        setIsPrinting(true);
+        // Wait for state update to hide buttons
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const element = document.getElementById('result-report-content');
+        if (!element) return;
+
+        try {
+            const canvas = await html2canvas(element, {
+                scale: 2, // Higher resolution
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff'
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+
+            const pdfWidth = 210;
+            const pdfHeight = 297;
+            const margin = 10;
+
+            const imgWidth = pdfWidth - (margin * 2);
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            let heightLeft = imgHeight;
+            let position = margin;
+
+            // First page
+            pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+            heightLeft -= (pdfHeight - (margin * 2));
+
+            // Extra pages if needed
+            while (heightLeft > 0) {
+                position = heightLeft - imgHeight + margin; // negative offset to slide image up
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+                heightLeft -= (pdfHeight - (margin * 2)); // Subtract usable page height
+            }
+
+            pdf.save(`${result.examId?.title || 'Exam'}_Result.pdf`);
+        } catch (err) {
+            console.error('PDF Generation failed:', err);
+            setError('Failed to generate PDF');
+        } finally {
+            setIsPrinting(false);
+        }
+    };
 
     useEffect(() => {
         const fetchResult = async () => {
             if (!id) return;
             try {
-                const data = await getResultById(id);
-                setResult(data);
+                const [resultData, analysisData] = await Promise.all([
+                    getResultById(id),
+                    getResultAnalysis(id)
+                ]);
+                setResult(resultData);
+                setAnalysis(analysisData);
             } catch (err: any) {
                 console.error('Failed to fetch result:', err);
                 setError(err.message || 'Failed to load result');
@@ -51,27 +110,33 @@ export default function Results() {
         );
     }
 
-    const percentage = (result.score / result.totalPoints) * 100;
+    const percentage = result.totalPoints > 0 ? (result.score / result.totalPoints) * 100 : 0;
     const correctAnswers = result.answers.filter((a: any) => a.isCorrect).length;
 
     return (
         <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-4xl mx-auto" id="result-report-content">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
-                    <Link to="/dashboard">
+                    <Link to="/dashboard" className="no-print">
                         <Button variant="ghost" className="gap-2 pl-0 hover:bg-transparent hover:text-primary">
                             <ArrowLeft className="h-5 w-5" /> Back to Dashboard
                         </Button>
                     </Link>
-                    <div className="flex gap-3">
-                        <Button variant="outline" size="sm" className="gap-2">
-                            <Download className="h-4 w-4" /> Download PDF
-                        </Button>
-                        <Button variant="outline" size="sm" className="gap-2">
-                            <Share2 className="h-4 w-4" /> Share
-                        </Button>
-                    </div>
+                    {!isPrinting && (
+                        <div className="flex gap-3">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-2"
+                                onClick={handleDownloadPDF}
+                                disabled={isPrinting}
+                            >
+                                <Download className="h-4 w-4" />
+                                {isPrinting ? 'Generating PDF...' : 'Download PDF'}
+                            </Button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Score Card */}
@@ -130,6 +195,136 @@ export default function Results() {
                         </div>
                     </div>
                 </motion.div>
+                {/* Insights Section */}
+                {analysis && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                        {/* Topic Performance */}
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200"
+                        >
+                            <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                                <Target className="h-5 w-5 text-primary" /> Topic Analysis
+                            </h3>
+                            <div className="h-[250px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={analysis.topicPerformance}>
+                                        <PolarGrid />
+                                        <PolarAngleAxis dataKey="topic" />
+                                        <PolarRadiusAxis angle={30} domain={[0, 100]} />
+                                        <Radar
+                                            name="Accuracy"
+                                            dataKey="accuracy"
+                                            stroke="#4F46E5"
+                                            fill="#4F46E5"
+                                            fillOpacity={0.6}
+                                        />
+                                        <Tooltip
+                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                            formatter={(value: any) => [`${parseFloat(value).toFixed(1)}%`, 'Accuracy']}
+                                        />
+                                    </RadarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </motion.div>
+
+                        {/* Peer Comparison */}
+                        <div className="space-y-6">
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-2xl text-white shadow-lg"
+                            >
+                                <div className="flex items-center justify-between mb-4">
+                                    <Award className="h-8 w-8 text-indigo-200" />
+                                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-100">
+                                        {analysis.isInsightsAvailable ? 'Final Rank' : 'Progress Rank'}
+                                    </span>
+                                </div>
+
+                                {analysis.isInsightsAvailable ? (
+                                    <>
+                                        <h4 className="text-sm font-medium text-indigo-100 mb-1">Class Rank</h4>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-4xl font-black">#{analysis.classRank}</span>
+                                            <span className="text-sm text-indigo-200">of {analysis.totalParticipants}</span>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <h4 className="text-sm font-medium text-indigo-100 mb-1">Percentile</h4>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-4xl font-black">{analysis.percentile}th</span>
+                                            <span className="text-sm text-indigo-200">percentile</span>
+                                        </div>
+                                    </>
+                                )}
+
+                                <p className="text-xs text-indigo-100 mt-4 leading-relaxed">
+                                    {analysis.isInsightsAvailable
+                                        ? `You performed better than ${analysis.percentile}% of students.`
+                                        : 'Final rankings will be available after the exam closes.'}
+                                </p>
+                            </motion.div>
+
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.1 }}
+                                className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="h-12 w-12 rounded-xl bg-green-50 flex items-center justify-center text-success">
+                                        <TrendingUp className="h-6 w-6" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500">Class Average</p>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-xl font-bold text-gray-900">{analysis.examAverage.toFixed(1)}</span>
+                                            <span className="text-sm text-gray-400">/ {result.totalPoints}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="mt-4 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-success transition-all duration-1000"
+                                        style={{ width: `${(analysis.examAverage / result.totalPoints) * 100}%` }}
+                                    ></div>
+                                </div>
+                            </motion.div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Peer Gap Analysis Section */}
+                {analysis?.isInsightsAvailable && analysis?.peerGapQuestions?.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-12 bg-amber-50 rounded-2xl border border-amber-100 p-6"
+                    >
+                        <h3 className="text-lg font-bold text-amber-900 mb-4 flex items-center gap-2">
+                            <Target className="h-5 w-5 text-amber-600" /> Growth Opportunities
+                        </h3>
+                        <p className="text-sm text-amber-800 mb-6">
+                            Most students got these questions right. Reviewing these topics could significantly improve your performance next time!
+                        </p>
+                        <div className="space-y-3">
+                            {analysis.peerGapQuestions.map((q: any, idx: number) => (
+                                <div key={idx} className="bg-white/80 backdrop-blur-sm p-4 rounded-xl border border-amber-200/50 flex items-center justify-between gap-4">
+                                    <div className="flex-1">
+                                        <p className="text-sm font-medium text-gray-800 line-clamp-1">{q.text}</p>
+                                        <p className="text-xs text-amber-600 font-medium">{q.globalAccuracy.toFixed(0)}% of peers correct</p>
+                                    </div>
+                                    <div className="text-amber-500 font-bold text-xs uppercase tracking-wider">
+                                        Review Needed
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
 
                 {/* Detailed Analysis */}
                 <div className="space-y-6">
@@ -177,6 +372,9 @@ export default function Results() {
                     ))}
                 </div>
             </div>
+
+            {/* Print-only CSS */}
+            {/* Removed print-only CSS as we are using html2canvas */}
         </div>
     );
 }

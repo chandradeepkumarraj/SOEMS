@@ -30,6 +30,22 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
 
 };
 
+export const teacher = (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (req.user && (req.user.role === 'teacher' || req.user.role === 'admin')) {
+        next();
+    } else {
+        res.status(401).json({ message: 'Not authorized as a teacher' });
+    }
+};
+
+export const proctor = (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (req.user && (req.user.role === 'proctor' || req.user.role === 'admin')) {
+        next();
+    } else {
+        res.status(401).json({ message: 'Not authorized as a proctor' });
+    }
+};
+
 export const admin = (req: AuthRequest, res: Response, next: NextFunction) => {
     if (req.user && req.user.role === 'admin') {
         next();

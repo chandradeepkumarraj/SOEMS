@@ -5,16 +5,25 @@ import {
     getExamById,
     deleteExam,
     submitExam,
-    updateExam
+    updateExam,
+    startExam,
+    updateSessionProgress,
+    endExam,
+    getExamAnalytics
 } from '../controllers/examController';
 import { getExamStats, getTeacherDashboardStats } from '../controllers/examStatsController';
-import { protect } from '../middleware/authMiddleware';
+import { protect, teacher } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
 router.route('/')
     .post(protect, createExam)
     .get(protect, getExams);
+
+router.post('/start/:id', protect, startExam);
+router.post('/progress/:id', protect, updateSessionProgress);
+router.post('/:id/end', protect, teacher, endExam);
+router.get('/:id/analytics', protect, teacher, getExamAnalytics);
 
 router.route('/teacher-stats')
     .get(protect, getTeacherDashboardStats);

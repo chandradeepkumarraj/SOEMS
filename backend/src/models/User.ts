@@ -6,11 +6,16 @@ export interface IUser extends Document {
     email: string;
     password: string;
     role: 'student' | 'teacher' | 'admin' | 'proctor';
+    rollNo?: string;
     avatarUrl?: string;
     bio?: string;
     phoneNumber?: string;
+    groupId?: mongoose.Types.ObjectId;
+    subgroupId?: mongoose.Types.ObjectId;
     address?: string;
     securityQuestions?: Array<{ question: string; answer: string }>;
+    createdAt: Date;
+    updatedAt: Date;
     matchPassword: (enteredPassword: string) => Promise<boolean>;
     matchSecurityAnswer: (answer: string, hashedAnswer: string) => Promise<boolean>;
 }
@@ -25,9 +30,30 @@ const UserSchema: Schema = new Schema(
             enum: ['student', 'teacher', 'admin', 'proctor'],
             default: 'student',
         },
+        rollNo: {
+            type: String,
+            unique: true,
+            sparse: true,
+            validate: {
+                validator: function (v: string) {
+                    return /^\d{13}$/.test(v);
+                },
+                message: (props: any) => `${props.value} is not a valid 13-digit roll number!`
+            }
+        },
         avatarUrl: { type: String },
         bio: { type: String },
-        phoneNumber: { type: String },
+        phoneNumber: {
+            type: String,
+            validate: {
+                validator: function (v: string) {
+                    return /^\d{10}$/.test(v);
+                },
+                message: (props: any) => `${props.value} is not a valid 10-digit phone number!`
+            }
+        },
+        groupId: { type: Schema.Types.ObjectId, ref: 'Group' },
+        subgroupId: { type: Schema.Types.ObjectId, ref: 'Subgroup' },
         address: { type: String },
         securityQuestions: [
             {

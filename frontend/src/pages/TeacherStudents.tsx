@@ -74,7 +74,7 @@ export default function TeacherStudents() {
                                                 />
                                                 <div>
                                                     <div className="font-medium text-gray-900">{student.name}</div>
-                                                    <div className="text-xs text-gray-500">ID: #{student._id.slice(-4)}</div>
+                                                    <div className="text-xs text-gray-500">Roll No: {student.rollNo}</div>
                                                 </div>
                                             </div>
                                         </td>
@@ -92,8 +92,8 @@ export default function TeacherStudents() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${student.avgScore >= 80 ? 'bg-green-100 text-green-800' :
-                                                    student.avgScore >= 60 ? 'bg-yellow-100 text-yellow-800' :
-                                                        'bg-red-100 text-red-800'
+                                                student.avgScore >= 60 ? 'bg-yellow-100 text-yellow-800' :
+                                                    'bg-red-100 text-red-800'
                                                 }`}>
                                                 {student.avgScore}%
                                             </span>

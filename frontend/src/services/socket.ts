@@ -65,3 +65,8 @@ export const emitProctorAlert = (examId: string, studentId: string, alertType: s
     const s = getSocket();
     s.emit('proctor-alert', { examId, studentId, alertType, message });
 };
+export const onExamClosedManually = (callback: (data: any) => void) => {
+    const s = getSocket();
+    s.on('exam-closed-manually', callback);
+    return () => { s.off('exam-closed-manually', callback); };
+};

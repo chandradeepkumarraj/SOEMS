@@ -11,9 +11,11 @@ import questionRoutes from './routes/questionRoutes';
 import examRoutes from './routes/examRoutes';
 import resultRoutes from './routes/resultRoutes';
 import adminRoutes from './routes/adminRoutes';
+import groupRoutes from './routes/groupRoutes';
 import http from 'http';
 import { initSocket } from './socket';
 import fs from 'fs';
+import { startExamExpirationWorker } from './utils/examWorker';
 
 dotenv.config();
 
@@ -36,10 +38,21 @@ app.use('/api/questions', questionRoutes);
 app.use('/api/exams', examRoutes);
 app.use('/api/results', resultRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/groups', groupRoutes);
 
 // Basic Route
 app.get('/', (req: Request, res: Response) => {
     res.send('SOEMS Backend is running!');
+});
+
+// Error handling middleware
+app.use((err: any, req: Request, res: Response, next: any) => {
+    const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+    res.status(statusCode);
+    res.json({
+        message: err.message,
+        stack: process.env.NODE_ENV === 'production' ? null : err.stack,
+    });
 });
 
 const server = http.createServer(app);
@@ -48,6 +61,10 @@ const io = initSocket(server);
 // Start Server
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+
+    // Start background workers
+    startExamExpirationWorker();
+
     try {
         fs.writeFileSync('server_status.txt', `Server started on port ${PORT} at ${new Date().toISOString()}`);
     } catch (e) {

@@ -7,7 +7,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 import { createQuestion } from '../services/questionService';
 import { createExam, getExamById, updateExam } from '../services/examService';
+import { getGroups, getSubgroups } from '../services/adminService';
 import { useEffect } from 'react';
+
+interface Question {
+    id: number;
+    text: string;
+    options: string[];
+    correctOption: number;
+    points: number;
+    difficulty: string;
+}
 
 export default function CreateExam() {
     const navigate = useNavigate();
@@ -22,9 +32,36 @@ export default function CreateExam() {
         date: '',
         time: '',
         instructions: '',
+        allowedGroups: [] as string[],
+        allowedSubgroups: [] as string[],
+        resultsPublished: false
     });
 
-    const [questions, setQuestions] = useState<any[]>([
+    const [groups, setGroups] = useState<any[]>([]);
+    const [subgroups, setSubgroups] = useState<any[]>([]);
+
+    useEffect(() => {
+        const fetchHierarchy = async () => {
+            try {
+                const groupsData = await getGroups();
+                setGroups(groupsData);
+            } catch (error) {
+                console.error('Failed to fetch groups:', error);
+            }
+        };
+        fetchHierarchy();
+    }, []);
+
+    const fetchSubgroupsForGroup = async (groupId: string) => {
+        try {
+            const data = await getSubgroups(groupId);
+            setSubgroups(data);
+        } catch (error) {
+            console.error('Failed to fetch subgroups:', error);
+        }
+    };
+
+    const [questions, setQuestions] = useState<Question[]>([
         { id: 1, text: '', options: ['', '', '', ''], correctOption: 0, points: 1, difficulty: 'medium' }
     ]);
 
@@ -37,13 +74,20 @@ export default function CreateExam() {
 
                     setExamData({
                         title: exam.title,
-                        description: exam.description || '', // legacy field handling
+                        description: exam.description || '',
                         instructions: exam.description || '',
-                        subject: exam.questions?.[0]?.subject || '', // Try to recover subject
+                        subject: exam.questions?.[0]?.subject || '',
                         duration: exam.duration.toString(),
                         date: start.toISOString().split('T')[0],
-                        time: start.toTimeString().slice(0, 5)
+                        time: start.toTimeString().slice(0, 5),
+                        allowedGroups: exam.allowedGroups || [],
+                        allowedSubgroups: exam.allowedSubgroups || [],
+                        resultsPublished: exam.resultsPublished || false
                     } as any);
+
+                    if (exam.allowedGroups && exam.allowedGroups.length === 1) {
+                        fetchSubgroupsForGroup(exam.allowedGroups[0]);
+                    }
 
                     if (exam.questions) {
                         setQuestions(exam.questions.map((q: any, i: number) => ({
@@ -70,7 +114,7 @@ export default function CreateExam() {
         ]);
     };
 
-    const handleQuestionChange = (id: number, field: string, value: any) => {
+    const handleQuestionChange = (id: number, field: keyof Question, value: any) => {
         setQuestions(questions.map(q => q.id === id ? { ...q, [field]: value } : q));
     };
 
@@ -130,7 +174,10 @@ export default function CreateExam() {
                 duration: durationMinutes,
                 startTime: startDateTime.toISOString(),
                 endTime: endDateTime.toISOString(),
-                status: 'published'
+                status: 'published',
+                resultsPublished: examData.resultsPublished,
+                allowedGroups: examData.allowedGroups,
+                allowedSubgroups: examData.allowedSubgroups
             };
 
             if (editId) {
@@ -221,6 +268,63 @@ export default function CreateExam() {
                                     value={examData.time}
                                     onChange={(e) => setExamData({ ...examData, time: e.target.value })}
                                 />
+                                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-4">
+                                        <label className="block text-sm font-medium text-gray-700">Assign to Groups (Target Audience)</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {groups.map(g => (
+                                                <button
+                                                    key={g._id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const isSelected = examData.allowedGroups.includes(g._id);
+                                                        const newGroups = isSelected
+                                                            ? examData.allowedGroups.filter(id => id !== g._id)
+                                                            : [...examData.allowedGroups, g._id];
+                                                        setExamData({ ...examData, allowedGroups: newGroups, allowedSubgroups: [] });
+                                                        if (!isSelected && newGroups.length === 1) {
+                                                            fetchSubgroupsForGroup(g._id);
+                                                        }
+                                                    }}
+                                                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${examData.allowedGroups.includes(g._id)
+                                                        ? 'bg-primary text-white border-primary'
+                                                        : 'bg-white text-gray-600 border-gray-200 hover:border-primary'
+                                                        }`}
+                                                >
+                                                    {g.name}
+                                                </button>
+                                            ))}
+                                            {groups.length === 0 && <span className="text-xs text-gray-400 italic">No groups available. Creating as public exam.</span>}
+                                        </div>
+                                    </div>
+
+                                    {examData.allowedGroups.length === 1 && subgroups.length > 0 && (
+                                        <div className="space-y-4">
+                                            <label className="block text-sm font-medium text-gray-700">Specific Session (Optional)</label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {subgroups.map(s => (
+                                                    <button
+                                                        key={s._id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const isSelected = examData.allowedSubgroups.includes(s._id);
+                                                            const newSubs = isSelected
+                                                                ? examData.allowedSubgroups.filter(id => id !== s._id)
+                                                                : [...examData.allowedSubgroups, s._id];
+                                                            setExamData({ ...examData, allowedSubgroups: newSubs });
+                                                        }}
+                                                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${examData.allowedSubgroups.includes(s._id)
+                                                            ? 'bg-indigo-500 text-white border-indigo-500'
+                                                            : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-500'
+                                                            }`}
+                                                    >
+                                                        {s.name} ({s.academicYear})
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                                 <div className="md:col-span-2">
                                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Instructions</label>
                                     <textarea
@@ -229,6 +333,18 @@ export default function CreateExam() {
                                         value={examData.instructions}
                                         onChange={(e) => setExamData({ ...examData, instructions: e.target.value })}
                                     />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={examData.resultsPublished}
+                                            onChange={(e) => setExamData({ ...examData, resultsPublished: e.target.checked })}
+                                            className="h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary"
+                                        />
+                                        <span className="text-sm font-medium text-gray-700">Publish results automatically after exam ends</span>
+                                    </label>
+                                    <p className="text-xs text-gray-500 ml-6">If enabled, students can view their scores and detailed answers immediately after the exam window closes.</p>
                                 </div>
                             </div>
                             <div className="mt-8 flex justify-end">
@@ -382,6 +498,6 @@ export default function CreateExam() {
                     )}
                 </AnimatePresence>
             </main>
-        </div>
+        </div >
     );
 }

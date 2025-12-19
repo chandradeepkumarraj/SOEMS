@@ -97,6 +97,33 @@ export default function Dashboard() {
                 <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 rounded-full bg-white/10 blur-3xl"></div>
             </motion.div>
 
+            {/* Student Info Card (Quick Verify) */}
+            {user?.role === 'student' && (
+                <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm flex flex-wrap items-center gap-6"
+                >
+                    <div className="flex items-center gap-2 text-sm">
+                        <span className="text-gray-500">Roll No:</span>
+                        <span className="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{user.rollNo || 'N/A'}</span>
+                    </div>
+                    {user.phoneNumber && (
+                        <div className="flex items-center gap-2 text-sm">
+                            <span className="text-gray-500">Phone:</span>
+                            <span className="font-bold text-gray-900">{user.phoneNumber}</span>
+                        </div>
+                    )}
+                    {user.group && (
+                        <div className="flex items-center gap-2 text-sm">
+                            <span className="text-gray-500">Group:</span>
+                            <span className="font-bold text-gray-900">{user.group.name}</span>
+                        </div>
+                    )}
+                </motion.div>
+            )}
+
             {/* Stats Overview */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatCard

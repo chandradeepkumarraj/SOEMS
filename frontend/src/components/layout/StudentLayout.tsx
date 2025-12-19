@@ -49,9 +49,9 @@ export default function StudentLayout() {
                         <Bell className="h-5 w-5" />
                         <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full"></span>
                     </button>
-                    {user?.avatarUrl && (
-                        <img src={user.avatarUrl} alt="Profile" className="h-8 w-8 rounded-full object-cover" />
-                    )}
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="h-5 w-5 text-primary" />
+                    </div>
                 </div>
             </header>
 
@@ -65,11 +65,9 @@ export default function StudentLayout() {
                 {/* User Profile Summary in Sidebar (Desktop) */}
                 <div className="p-6 border-b border-gray-200 hidden md:block">
                     <div className="flex items-center gap-3 mb-4">
-                        <img
-                            src={user?.avatarUrl || `https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=random`}
-                            alt={user?.name}
-                            className="h-12 w-12 rounded-full object-cover border-2 border-white shadow-sm"
-                        />
+                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center border-2 border-white shadow-sm">
+                            <User className="h-6 w-6 text-primary" />
+                        </div>
                         <div className="overflow-hidden">
                             <p className="font-medium text-gray-900 truncate">{user?.name || 'Loading...'}</p>
                             <p className="text-xs text-gray-500 truncate">{user?.email}</p>
@@ -86,8 +84,8 @@ export default function StudentLayout() {
                                 to={item.href}
                                 onClick={() => setIsSidebarOpen(false)}
                                 className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${isActive
-                                        ? 'bg-primary/5 text-primary'
-                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                    ? 'bg-primary/5 text-primary'
+                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                     }`}
                             >
                                 <item.icon className={`h-5 w-5 ${isActive ? 'text-primary' : 'text-gray-400'}`} />
@@ -134,7 +132,7 @@ export default function StudentLayout() {
                         <div className="flex items-center gap-3">
                             <div className="text-right">
                                 <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                                <p className="text-xs text-gray-500">Student ID: #{user?._id?.slice(-4)}</p>
+                                <p className="text-xs text-gray-500">Roll No: {user?.rollNo}</p>
                             </div>
                         </div>
                     </div>
