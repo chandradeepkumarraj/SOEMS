@@ -57,8 +57,8 @@ export const startExamSession = async (id: string) => {
     return response.data;
 };
 
-export const updateExamProgress = async (id: string, answers: any, timeSpent: any) => {
-    const response = await axios.post(`${API_URL}/progress/${id}`, { answers, timeSpent }, { headers: getAuthHeader() });
+export const updateExamProgress = async (id: string, answers: any, timeSpent: any, flagged: any) => {
+    const response = await axios.post(`${API_URL}/progress/${id}`, { answers, timeSpent, flagged }, { headers: getAuthHeader() });
     return response.data;
 };
 export const endExam = async (id: string) => {

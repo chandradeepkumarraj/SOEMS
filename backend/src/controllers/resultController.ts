@@ -83,13 +83,16 @@ export const getResultAnalysis = async (req: any, res: Response) => {
         const examStatus = examObj.status || 'published';
         const isClosed = examStatus === 'closed';
 
-        const allResultsForExam = await Result.find({ examId }).sort({ score: -1, submittedAt: 1 });
+        const allResultsForExam = await Result.find({ examId })
+            .populate('answers.questionId', 'text')
+            .sort({ score: -1, submittedAt: 1 })
+            .lean();
+
         const totalExams = allResultsForExam.length;
         const totalScoreSum = allResultsForExam.reduce((sum, r) => sum + r.score, 0);
         const examAverage = totalExams > 0 ? (totalScoreSum / totalExams) : 0;
 
-        // Calculate Rank and Percentile ALWAYS for correctness, 
-        // but UI can decide whether to show detailed position.
+        // Calculate Rank and Percentile
         const rankIndex = allResultsForExam.findIndex(r => r._id.toString() === result._id.toString());
         const classRank = rankIndex !== -1 ? rankIndex + 1 : null;
         const studentsBeaten = allResultsForExam.filter(r => r.score < result.score).length;
@@ -103,7 +106,7 @@ export const getResultAnalysis = async (req: any, res: Response) => {
             allResultsForExam.forEach(res => {
                 res.answers.forEach(ans => {
                     if (!ans.questionId) return;
-                    const qId = ans.questionId.toString();
+                    const qId = (ans.questionId as any)._id ? (ans.questionId as any)._id.toString() : ans.questionId.toString();
                     if (!questionPassRates[qId]) questionPassRates[qId] = { correct: 0, total: 0 };
                     questionPassRates[qId].total++;
                     if (ans.isCorrect) questionPassRates[qId].correct++;
@@ -112,10 +115,11 @@ export const getResultAnalysis = async (req: any, res: Response) => {
 
             result.answers.forEach((ans: any) => {
                 if (!ans.isCorrect && ans.questionId) {
-                    const stats = questionPassRates[ans.questionId._id.toString()];
+                    const qId = (ans.questionId as any)._id ? (ans.questionId as any)._id.toString() : ans.questionId.toString();
+                    const stats = questionPassRates[qId];
                     if (stats && (stats.correct / stats.total) > 0.6) {
                         peerGapQuestions.push({
-                            text: (ans.questionId as any).text,
+                            text: (ans.questionId as any).text || 'Question',
                             globalAccuracy: (stats.correct / stats.total) * 100
                         });
                     }

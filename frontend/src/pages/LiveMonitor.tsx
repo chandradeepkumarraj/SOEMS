@@ -1,16 +1,23 @@
-import React, { useEffect, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
-import { AlertCircle, User, Monitor, ShieldAlert, CheckCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Socket } from 'socket.io-client';
+import { getSocket } from '../services/socket';
+import { AlertCircle, User, Monitor, ShieldAlert, CheckCircle, History } from 'lucide-react';
 import { Button } from '../components/ui/Button';
-import { SOCKET_URL } from '../config';
 import { Link } from 'react-router-dom';
+
+interface Violation {
+    type: string;
+    message: string;
+    timestamp: string;
+}
 
 interface StudentSession {
     studentId: string;
     examId: string;
     status: 'active' | 'submitted' | 'alert';
     lastAlert?: string;
-    name?: string; // Placeholder for real name mapping
+    name?: string;
+    violations: Violation[];
 }
 
 export default function LiveMonitor() {
@@ -19,31 +26,40 @@ export default function LiveMonitor() {
     const [logs, setLogs] = useState<string[]>([]);
 
     useEffect(() => {
-        const newSocket = io(SOCKET_URL);
-        setSocket(newSocket);
+        const s = getSocket();
+        setSocket(s);
 
-        newSocket.on('connect', () => {
+        const onConnect = () => {
             addLog('Connected to Proctoring Server');
-            // Join a "global-monitor" room if needed
-        });
+            s.emit('join-room', 'global-proctor-room');
+        };
 
-        newSocket.on('monitor-exam-start', (data) => {
+        if (s.connected) {
+            onConnect();
+        }
+
+        s.on('connect', onConnect);
+
+        s.on('monitor-exam-start', (data) => {
             addLog(`Student ${data.studentId} started exam ${data.examId}`);
             updateSession(data.studentId, data.examId, 'active');
         });
 
-        newSocket.on('monitor-exam-submit', (data) => {
+        s.on('monitor-exam-submit', (data) => {
             addLog(`Student ${data.studentId} submitted exam ${data.examId}`);
             updateSession(data.studentId, data.examId, 'submitted');
         });
 
-        newSocket.on('monitor-proctor-alert', (data) => {
-            addLog(`ALERT: ${data.message} (${data.studentId})`);
-            updateSession(data.studentId, data.examId, 'alert', data.alertType);
+        s.on('monitor-proctor-alert', (data) => {
+            addLog(`CRITICAL: ${data.alertType} from ${data.studentId}`);
+            updateSession(data.studentId, data.examId, 'alert', data.alertType, data.message);
         });
 
         return () => {
-            newSocket.disconnect();
+            s.off('connect', onConnect);
+            s.off('monitor-exam-start');
+            s.off('monitor-exam-submit');
+            s.off('monitor-proctor-alert');
         };
     }, []);
 
@@ -51,13 +67,30 @@ export default function LiveMonitor() {
         setLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 50));
     };
 
-    const updateSession = (studentId: string, examId: string, status: StudentSession['status'], alert?: string) => {
+    const updateSession = (studentId: string, examId: string, status: StudentSession['status'], alertType?: string, alertMessage?: string) => {
         setSessions(prev => {
             const existing = prev.find(s => s.studentId === studentId);
+            const newViolation = alertType ? {
+                type: alertType,
+                message: alertMessage || '',
+                timestamp: new Date().toLocaleTimeString()
+            } : null;
+
             if (existing) {
-                return prev.map(s => s.studentId === studentId ? { ...s, status, lastAlert: alert || s.lastAlert } : s);
+                return prev.map(s => s.studentId === studentId ? {
+                    ...s,
+                    status,
+                    lastAlert: alertType || s.lastAlert,
+                    violations: newViolation ? [newViolation, ...s.violations].slice(0, 10) : s.violations
+                } : s);
             }
-            return [...prev, { studentId, examId, status, lastAlert: alert }];
+            return [...prev, {
+                studentId,
+                examId,
+                status,
+                lastAlert: alertType,
+                violations: newViolation ? [newViolation] : []
+            }];
         });
     };
 
@@ -98,22 +131,45 @@ export default function LiveMonitor() {
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                             {sessions.map(session => (
-                                <div key={session.studentId} className={`p-4 rounded-xl border-l-4 shadow-sm bg-white border-gray-200 relative overflow-hidden ${session.status === 'alert' ? 'border-l-red-500' : session.status === 'submitted' ? 'border-l-green-500' : 'border-l-blue-500'}`}>
+                                <div key={session.studentId} className={`p-4 rounded-xl border-l-4 shadow-sm bg-white border-gray-200 transition-all duration-300 ${session.status === 'alert' ? 'border-l-red-500 ring-2 ring-red-100' : session.status === 'submitted' ? 'border-l-green-500' : 'border-l-blue-500'}`}>
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="flex items-center gap-2">
                                             <div className="bg-gray-100 p-2 rounded-full">
                                                 <User className="h-4 w-4 text-gray-600" />
                                             </div>
-                                            <span className="font-medium text-sm">{session.studentId}</span>
+                                            <div>
+                                                <span className="font-bold text-sm block">{session.studentId}</span>
+                                                <span className="text-[10px] text-gray-400 font-mono">Exam: {session.examId}</span>
+                                            </div>
                                         </div>
                                         {session.status === 'alert' && <ShieldAlert className="h-5 w-5 text-red-500 animate-pulse" />}
                                         {session.status === 'submitted' && <CheckCircle className="h-5 w-5 text-green-500" />}
                                     </div>
-                                    <div className="space-y-1">
-                                        <p className="text-xs text-gray-500">Exam: {session.examId}</p>
-                                        <p className={`text-xs font-bold uppercase ${session.status === 'alert' ? 'text-red-600' : session.status === 'submitted' ? 'text-green-600' : 'text-blue-600'}`}>{session.status}</p>
-                                        {session.lastAlert && (
-                                            <p className="text-xs text-red-500 mt-2 bg-red-50 p-1 rounded">Risk: {session.lastAlert}</p>
+
+                                    <div className="mt-4 space-y-2">
+                                        <div className="flex justify-between items-center bg-gray-50 px-2 py-1 rounded">
+                                            <span className={`text-[10px] font-black uppercase tracking-wider ${session.status === 'alert' ? 'text-red-600' : session.status === 'submitted' ? 'text-green-600' : 'text-blue-600'}`}>{session.status}</span>
+                                            {session.violations.length > 0 && (
+                                                <span className="bg-red-100 text-red-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                                                    {session.violations.length} violations
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {session.violations.length > 0 && (
+                                            <div className="mt-3 space-y-1 max-h-24 overflow-y-auto pr-1">
+                                                <p className="text-[9px] font-bold text-gray-400 mb-1 flex items-center gap-1 uppercase tracking-tighter">
+                                                    <History className="h-2.5 w-2.5" /> Violation History
+                                                </p>
+                                                {session.violations.map((v, i) => (
+                                                    <div key={i} className="text-[10px] bg-red-50/50 p-1.5 rounded border border-red-100 flex justify-between items-start gap-1">
+                                                        <span className="text-red-700 font-medium leading-tight">
+                                                            <span className="font-bold">[{v.type}]</span> {v.message}
+                                                        </span>
+                                                        <span className="text-gray-400 whitespace-nowrap">{v.timestamp}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         )}
                                     </div>
                                 </div>

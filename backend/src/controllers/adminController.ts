@@ -5,6 +5,7 @@ import { Parser } from 'json2csv';
 import csv from 'csv-parser';
 import fs from 'fs';
 import { z } from 'zod';
+import mongoose from 'mongoose';
 
 // @desc    Get all users
 // @route   GET /api/admin/users
@@ -25,9 +26,15 @@ export const createUser = async (req: Request, res: Response) => {
     try {
         const { name, email, password, role, rollNo, phoneNumber, groupId, subgroupId } = req.body;
 
-        const userExists = await User.findOne({ email });
+        const userExists = await User.findOne({
+            $or: [
+                { email },
+                ...(rollNo && role === 'student' ? [{ rollNo }] : [])
+            ]
+        });
         if (userExists) {
-            return res.status(400).json({ message: 'User already exists' });
+            const conflict = userExists.email === email ? 'email' : 'roll number';
+            return res.status(400).json({ message: `User with this ${conflict} already exists` });
         }
 
         const user = await User.create({
@@ -35,10 +42,10 @@ export const createUser = async (req: Request, res: Response) => {
             email,
             password,
             role: role || 'student',
-            rollNo,
+            rollNo: rollNo || undefined,
             phoneNumber,
-            groupId,
-            subgroupId
+            groupId: groupId || undefined,
+            subgroupId: subgroupId || undefined
         });
 
         if (user) {
@@ -114,7 +121,7 @@ export const importUsers = async (req: any, res: Response) => {
         rollNo: z.string().regex(/^\d{13}$/, "Roll No must be exactly 13 digits"),
         phoneNumber: z.string().regex(/^\d{10}$/, "Phone number must be exactly 10 digits"),
         password: z.string().min(6).optional().default("Welcome@123"),
-        role: z.enum(['student', 'teacher', 'admin', 'proctor']).optional().default('student')
+        role: z.literal('student').default('student')
     });
 
     const processImport = () => new Promise((resolve, reject) => {
@@ -174,6 +181,7 @@ export const importUsers = async (req: any, res: Response) => {
                             // 3. Queue for batch creation
                             validUsers.push({
                                 ...validatedData,
+                                role: 'student', // Strictly enforce student role
                                 groupId: groupId || undefined,
                                 subgroupId: subgroupId || undefined
                             });
@@ -189,7 +197,14 @@ export const importUsers = async (req: any, res: Response) => {
 
                     // 4. Batch Create
                     if (validUsers.length > 0) {
-                        await User.insertMany(validUsers, { ordered: false });
+                        // Hash passwords before insertMany
+                        const salt = await bcrypt.genSalt(10);
+                        const processedUsers = await Promise.all(validUsers.map(async (u) => ({
+                            ...u,
+                            password: await bcrypt.hash(u.password, salt)
+                        })));
+
+                        await User.insertMany(processedUsers, { ordered: false });
                     }
 
                     resolve({ addedCount: validUsers.length, errorDetails, total: results.length });
@@ -233,7 +248,7 @@ export const getSystemStats = async (req: Request, res: Response) => {
 
         // Check DB connection
         // 0: disconnected, 1: connected, 2: connecting, 3: disconnecting
-        const dbStatus = require('mongoose').connection.readyState === 1 ? 'Connected' : 'Disconnected';
+        const dbStatus = mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected';
 
         res.json({
             uptime,

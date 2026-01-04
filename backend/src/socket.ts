@@ -31,17 +31,20 @@ export const initSocket = (httpServer: HttpServer) => {
             console.log(`Exam started by student ${data.studentId} for exam ${data.examId}`);
             // Notify teachers/admins monitoring this exam
             io.to(data.examId).emit('monitor-exam-start', data);
+            io.to('global-proctor-room').emit('monitor-exam-start', data);
         });
 
         socket.on('exam-submit', (data: { examId: string; studentId: string }) => {
             console.log(`Exam submitted by student ${data.studentId} for exam ${data.examId}`);
             io.to(data.examId).emit('monitor-exam-submit', data);
+            io.to('global-proctor-room').emit('monitor-exam-submit', data);
         });
 
         // Proctoring Events (e.g., tab switch, face not found)
         socket.on('proctor-alert', (data: { examId: string; studentId: string; alertType: string; message: string }) => {
-            console.log(`Proctor alert: ${data.alertType} from student ${data.studentId}`);
+            console.log(`[PROCTOR ALERT] ${data.alertType} from student ${data.studentId}: ${data.message}`);
             io.to(data.examId).emit('monitor-proctor-alert', data);
+            io.to('global-proctor-room').emit('monitor-proctor-alert', data);
         });
 
         socket.on('disconnect', () => {

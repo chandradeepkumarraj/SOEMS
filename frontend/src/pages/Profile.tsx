@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getUserProfile, updateUserProfile } from '../services/userService';
-import { User, Mail, Phone, MapPin, Save, X, Edit2, Settings, Clock, CheckCircle, AlertTriangle, ToggleLeft, ToggleRight, Key } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Save, X, Edit2, Settings, Clock, CheckCircle, AlertTriangle, ToggleLeft, ToggleRight, Key, BookOpen } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { motion } from 'framer-motion';
 
@@ -171,6 +171,12 @@ export default function Profile() {
                                         <span className="font-medium text-gray-900">{formData.subgroup.name} ({formData.subgroup.academicYear})</span>
                                     </div>
                                 )}
+                                {formData.institution && (
+                                    <div className="flex justify-between py-2 border-t border-gray-50 mt-1">
+                                        <span className="text-gray-500">Institution</span>
+                                        <span className="font-medium text-gray-900">{formData.institution}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -215,6 +221,14 @@ export default function Profile() {
                                         onChange={handleChange}
                                         disabled={!isEditing || formData.role === 'student'}
                                         icon={MapPin}
+                                    />
+                                    <InputField
+                                        label="Institution / School"
+                                        name="institution"
+                                        value={formData.institution || ''}
+                                        onChange={handleChange}
+                                        disabled={!isEditing}
+                                        icon={BookOpen}
                                     />
                                     <div className="md:col-span-2">
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Professional Bio</label>

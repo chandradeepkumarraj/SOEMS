@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import Question from '../models/Question';
+import Exam from '../models/Exam';
 
 // @desc    Create a new question
 // @route   POST /api/questions
@@ -83,8 +84,14 @@ export const deleteQuestion = async (req: Request, res: Response) => {
         const question = await Question.findById(req.params.id);
 
         if (question) {
+            // Cascade: Remove this question from any exams that include it
+            await Exam.updateMany(
+                { questions: question._id },
+                { $pull: { questions: question._id } }
+            );
+
             await question.deleteOne();
-            res.json({ message: 'Question removed' });
+            res.json({ message: 'Question removed and unlinked from exams' });
         } else {
             res.status(404).json({ message: 'Question not found' });
         }

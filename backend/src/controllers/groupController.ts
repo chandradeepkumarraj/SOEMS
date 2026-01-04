@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import Group from '../models/Group';
 import Subgroup from '../models/Subgroup';
 import User from '../models/User';
+import Exam from '../models/Exam';
+import Result from '../models/Result';
 
 // @desc    Get all groups
 // @route   GET /api/groups
@@ -81,19 +83,52 @@ export const deleteGroup = async (req: Request, res: Response) => {
             return res.status(404).json({ message: 'Group not found' });
         }
 
-        // 1. Delete all subgroups for this group
-        await Subgroup.deleteMany({ groupId: group._id });
+        // 1. Get all subgroup IDs first for thorough cleanup
+        const subgroups = await Subgroup.find({ groupId: group._id }, '_id');
+        const subgroupIds = subgroups.map(s => s._id);
 
-        // 2. Unlink all users from this group (and subgroup)
+        // 2. Identify all students in this group before deleting them
+        const usersInGroup = await User.find({ groupId: group._id }, '_id');
+        const userIds = usersInGroup.map(u => u._id);
+
+        // 3. Delete all results for these students
+        if (userIds.length > 0) {
+            await Result.deleteMany({ studentId: { $in: userIds } });
+        }
+
+        // 4. Delete all users (students) from this group
+        // Note: We only delete students. Teachers/Admins are just unlinked if they happen to have a groupId (though usually they don't)
+        await User.deleteMany({ groupId: group._id, role: 'student' });
+
+        // 5. Unlink any non-student users (safety measure)
         await User.updateMany(
             { groupId: group._id },
             { $set: { groupId: null, subgroupId: null } }
         );
 
-        // 3. Delete the group
+        // 6. Delete all subgroups for this group
+        await Subgroup.deleteMany({ groupId: group._id });
+
+        // 7. Remove group AND its subgroups from any Exam allowed list
+        await Exam.updateMany(
+            {
+                $or: [
+                    { allowedGroups: group._id },
+                    { allowedSubgroups: { $in: subgroupIds } }
+                ]
+            },
+            {
+                $pull: {
+                    allowedGroups: group._id,
+                    allowedSubgroups: { $in: subgroupIds }
+                }
+            }
+        );
+
+        // 8. Delete the group
         await group.deleteOne();
 
-        res.json({ message: 'Group and related data cleaned up' });
+        res.json({ message: 'Group, subgroups, students, and results cleaned up' });
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
@@ -109,16 +144,34 @@ export const deleteSubgroup = async (req: Request, res: Response) => {
             return res.status(404).json({ message: 'Subgroup not found' });
         }
 
-        // 1. Unlink all users from this subgroup
+        // 1. Identify all students in this subgroup before deleting them
+        const usersInSubgroup = await User.find({ subgroupId: subgroup._id }, '_id');
+        const userIds = usersInSubgroup.map(u => u._id);
+
+        // 2. Delete all results for these students
+        if (userIds.length > 0) {
+            await Result.deleteMany({ studentId: { $in: userIds } });
+        }
+
+        // 3. Delete all users (students) from this subgroup
+        await User.deleteMany({ subgroupId: subgroup._id, role: 'student' });
+
+        // 4. Unlink any non-student users (safety measure)
         await User.updateMany(
             { subgroupId: subgroup._id },
             { $set: { subgroupId: null } }
         );
 
-        // 2. Delete the subgroup
+        // 5. Remove subgroup from any Exam allowed list
+        await Exam.updateMany(
+            { allowedSubgroups: subgroup._id },
+            { $pull: { allowedSubgroups: subgroup._id } }
+        );
+
+        // 6. Delete the subgroup
         await subgroup.deleteOne();
 
-        res.json({ message: 'Subgroup deleted and users updated' });
+        res.json({ message: 'Subgroup, students, and results deleted' });
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }

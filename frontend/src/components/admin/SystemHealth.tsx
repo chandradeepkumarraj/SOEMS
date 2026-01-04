@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getSystemStats } from '../../services/adminService';
 import { Server, Database, Activity, RefreshCw } from 'lucide-react';
 import { Button } from '../../components/ui/Button';

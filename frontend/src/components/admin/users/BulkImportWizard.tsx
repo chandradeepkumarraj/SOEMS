@@ -36,7 +36,6 @@ export default function BulkImportWizard({ onClose, onSuccess, groups, subgroups
     const [selectedSubgroup, setSelectedSubgroup] = useState('');
     const [filteredSubgroups, setFilteredSubgroups] = useState<any[]>([]);
     const [defaultPassword, setDefaultPassword] = useState('exam123');
-    const [defaultRole, setDefaultRole] = useState('student');
 
     const handleGroupChange = (groupId: string) => {
         setSelectedGroup(groupId);
@@ -83,12 +82,8 @@ export default function BulkImportWizard({ onClose, onSuccess, groups, subgroups
             normalizedRow.password = defaultPassword;
         }
 
-        // Default Role
-        if (!normalizedRow.role || String(normalizedRow.role).trim() === '') {
-            normalizedRow.role = defaultRole;
-        } else {
-            normalizedRow.role = normalizedRow.role.toLowerCase(); // consistent lowercase
-        }
+        // Hardcode Role: Bulk import is for students only
+        normalizedRow.role = 'student';
 
         return {
             row: normalizedRow as CSVRow,
@@ -160,8 +155,8 @@ export default function BulkImportWizard({ onClose, onSuccess, groups, subgroups
                 {/* Header */}
                 <div className="p-6 border-b border-gray-100 flex justify-between items-center">
                     <div>
-                        <h2 className="text-xl font-bold text-gray-900">Bulk Import Wizard</h2>
-                        <p className="text-sm text-gray-500">Step {step} of 2: {step === 1 ? 'Upload & Settings' : 'Preview & Validate'}</p>
+                        <h2 className="text-xl font-bold text-gray-900">Student Bulk Import Wizard</h2>
+                        <p className="text-sm text-gray-500">Step {step} of 2: {step === 1 ? 'Upload & Settings' : 'Preview & Validate Students'}</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-colors">
                         <X className="h-5 w-5" />
@@ -207,7 +202,7 @@ export default function BulkImportWizard({ onClose, onSuccess, groups, subgroups
 
                                 {/* Defaults */}
                                 <div className="grid grid-cols-2 gap-4 pt-2 border-t border-blue-200">
-                                    <div>
+                                    <div className="flex-1">
                                         <label className="block text-sm font-semibold text-blue-800 mb-1">Default Password</label>
                                         <input
                                             type="text"
@@ -216,19 +211,6 @@ export default function BulkImportWizard({ onClose, onSuccess, groups, subgroups
                                             onChange={e => setDefaultPassword(e.target.value)}
                                             placeholder="Default Password"
                                         />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-semibold text-blue-800 mb-1">Default Role</label>
-                                        <select
-                                            className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-                                            value={defaultRole}
-                                            onChange={e => setDefaultRole(e.target.value)}
-                                        >
-                                            <option value="student">Student</option>
-                                            <option value="teacher">Teacher</option>
-                                            <option value="admin">Admin</option>
-                                            <option value="proctor">Proctor</option>
-                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -244,7 +226,7 @@ export default function BulkImportWizard({ onClose, onSuccess, groups, subgroups
                                 <div className="bg-primary/10 h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4 text-primary">
                                     <FileUp className="h-8 w-8" />
                                 </div>
-                                <h3 className="text-lg font-bold text-gray-900">Click or Drag CSV file here</h3>
+                                <h3 className="text-lg font-bold text-gray-900">Click or Drag Student CSV here</h3>
                                 <p className="text-sm text-gray-500 mt-2">
                                     Columns: name, email, rollNo, phoneNumber<br />
                                     (Password defaults to '{defaultPassword}' if empty)

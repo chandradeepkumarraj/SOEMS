@@ -13,6 +13,7 @@ export interface IUser extends Document {
     groupId?: mongoose.Types.ObjectId;
     subgroupId?: mongoose.Types.ObjectId;
     address?: string;
+    institution?: string;
     securityQuestions?: Array<{ question: string; answer: string }>;
     createdAt: Date;
     updatedAt: Date;
@@ -20,49 +21,29 @@ export interface IUser extends Document {
     matchSecurityAnswer: (answer: string, hashedAnswer: string) => Promise<boolean>;
 }
 
+const options = { discriminatorKey: 'role', timestamps: true };
+
 const UserSchema: Schema = new Schema(
     {
         name: { type: String, required: true },
         email: { type: String, required: true, unique: true },
         password: { type: String, required: true },
-        role: {
-            type: String,
-            enum: ['student', 'teacher', 'admin', 'proctor'],
-            default: 'student',
-        },
-        rollNo: {
-            type: String,
-            unique: true,
-            sparse: true,
-            validate: {
-                validator: function (v: string) {
-                    return /^\d{13}$/.test(v);
-                },
-                message: (props: any) => `${props.value} is not a valid 13-digit roll number!`
-            }
-        },
         avatarUrl: { type: String },
-        bio: { type: String },
         phoneNumber: {
             type: String,
             validate: {
                 validator: function (v: string) {
+                    if (!v) return true;
                     return /^\d{10}$/.test(v);
                 },
                 message: (props: any) => `${props.value} is not a valid 10-digit phone number!`
             }
         },
-        groupId: { type: Schema.Types.ObjectId, ref: 'Group' },
-        subgroupId: { type: Schema.Types.ObjectId, ref: 'Subgroup' },
         address: { type: String },
-        securityQuestions: [
-            {
-                question: { type: String },
-                answer: { type: String }, // Will be hashed
-            },
-        ],
+        bio: { type: String },
+        institution: { type: String },
     },
-    { timestamps: true },
+    options
 );
 
 // Encrypt password using bcrypt
@@ -74,15 +55,48 @@ UserSchema.pre<IUser>('save', async function (next) {
     this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Match user entered password to hashed password in database
 UserSchema.methods.matchPassword = async function (enteredPassword: string) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Match security answer to hashed answer
 UserSchema.methods.matchSecurityAnswer = async function (answer: string, hashedAnswer: string) {
     return await bcrypt.compare(answer, hashedAnswer);
 };
 
 const User = mongoose.model<IUser>('User', UserSchema);
+
+// --- DISCRIMINATORS (Logical Partitioning) ---
+
+// 1. Student Discriminator
+export const Student = User.discriminator('student', new mongoose.Schema({
+    rollNo: {
+        type: String,
+        unique: true,
+        sparse: true,
+        validate: {
+            validator: function (v: string) {
+                if (!v) return true;
+                return /^\d{13}$/.test(v);
+            },
+            message: (props: any) => `${props.value} is not a valid 13-digit roll number!`
+        }
+    },
+    groupId: { type: Schema.Types.ObjectId, ref: 'Group' },
+    subgroupId: { type: Schema.Types.ObjectId, ref: 'Subgroup' },
+}));
+
+// 2. Staff Discriminator (Admin, Teacher, Proctor)
+const StaffSchema = new mongoose.Schema({
+    securityQuestions: [
+        {
+            question: { type: String },
+            answer: { type: String },
+        },
+    ],
+});
+
+export const Teacher = User.discriminator('teacher', StaffSchema);
+export const Admin = User.discriminator('admin', StaffSchema);
+export const Proctor = User.discriminator('proctor', StaffSchema);
+
 export default User;

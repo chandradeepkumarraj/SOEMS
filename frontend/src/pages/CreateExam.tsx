@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { ArrowLeft, ArrowRight, Plus, Trash2, Save, CheckCircle2, FileText } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, Trash2, Save, CheckCircle2, FileText, ShieldAlert } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -34,7 +34,12 @@ export default function CreateExam() {
         instructions: '',
         allowedGroups: [] as string[],
         allowedSubgroups: [] as string[],
-        resultsPublished: false
+        resultsPublished: false,
+        proctoringConfig: {
+            enableTabLock: true,
+            enableFullscreen: true,
+            enableInputLock: true
+        }
     });
 
     const [groups, setGroups] = useState<any[]>([]);
@@ -82,7 +87,12 @@ export default function CreateExam() {
                         time: start.toTimeString().slice(0, 5),
                         allowedGroups: exam.allowedGroups || [],
                         allowedSubgroups: exam.allowedSubgroups || [],
-                        resultsPublished: exam.resultsPublished || false
+                        resultsPublished: exam.resultsPublished || false,
+                        proctoringConfig: exam.proctoringConfig || {
+                            enableTabLock: true,
+                            enableFullscreen: true,
+                            enableInputLock: true
+                        }
                     } as any);
 
                     if (exam.allowedGroups && exam.allowedGroups.length === 1) {
@@ -177,7 +187,8 @@ export default function CreateExam() {
                 status: 'published',
                 resultsPublished: examData.resultsPublished,
                 allowedGroups: examData.allowedGroups,
-                allowedSubgroups: examData.allowedSubgroups
+                allowedSubgroups: examData.allowedSubgroups,
+                proctoringConfig: examData.proctoringConfig
             };
 
             if (editId) {
@@ -345,6 +356,61 @@ export default function CreateExam() {
                                         <span className="text-sm font-medium text-gray-700">Publish results automatically after exam ends</span>
                                     </label>
                                     <p className="text-xs text-gray-500 ml-6">If enabled, students can view their scores and detailed answers immediately after the exam window closes.</p>
+                                </div>
+                                <div className="md:col-span-2 border-t border-gray-100 pt-6 mt-2">
+                                    <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                        <ShieldAlert className="h-4 w-4 text-primary" /> Proctoring & Security Settings
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors">
+                                            <input
+                                                type="checkbox"
+                                                id="tabLock"
+                                                checked={examData.proctoringConfig.enableTabLock}
+                                                onChange={(e) => setExamData({
+                                                    ...examData,
+                                                    proctoringConfig: { ...examData.proctoringConfig, enableTabLock: e.target.checked }
+                                                })}
+                                                className="mt-1 h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary"
+                                            />
+                                            <label htmlFor="tabLock" className="cursor-pointer">
+                                                <span className="text-sm font-medium text-gray-700 block">Tab Lock</span>
+                                                <span className="text-[10px] text-gray-500">Detect tab/window switching</span>
+                                            </label>
+                                        </div>
+                                        <div className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors">
+                                            <input
+                                                type="checkbox"
+                                                id="fullscreen"
+                                                checked={examData.proctoringConfig.enableFullscreen}
+                                                onChange={(e) => setExamData({
+                                                    ...examData,
+                                                    proctoringConfig: { ...examData.proctoringConfig, enableFullscreen: e.target.checked }
+                                                })}
+                                                className="mt-1 h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary"
+                                            />
+                                            <label htmlFor="fullscreen" className="cursor-pointer">
+                                                <span className="text-sm font-medium text-gray-700 block">Force Fullscreen</span>
+                                                <span className="text-[10px] text-gray-500">Exam must be in fullscreen</span>
+                                            </label>
+                                        </div>
+                                        <div className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors">
+                                            <input
+                                                type="checkbox"
+                                                id="inputLock"
+                                                checked={examData.proctoringConfig.enableInputLock}
+                                                onChange={(e) => setExamData({
+                                                    ...examData,
+                                                    proctoringConfig: { ...examData.proctoringConfig, enableInputLock: e.target.checked }
+                                                })}
+                                                className="mt-1 h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary"
+                                            />
+                                            <label htmlFor="inputLock" className="cursor-pointer">
+                                                <span className="text-sm font-medium text-gray-700 block">Input Lockdown</span>
+                                                <span className="text-[10px] text-gray-500">Block Ctrl+C, Ctrl+V, etc.</span>
+                                            </label>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div className="mt-8 flex justify-end">

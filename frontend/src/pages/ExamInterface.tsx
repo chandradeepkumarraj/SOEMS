@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../components/ui/Button';
-import { Clock, ChevronLeft, ChevronRight, Flag, Menu, X, AlertCircle } from 'lucide-react';
+import { Clock, ChevronLeft, ChevronRight, Flag, Menu, X, AlertCircle, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getExamById, submitExam, startExamSession, updateExamProgress } from '../services/examService';
-import { joinExamRoom, emitExamStart, emitExamSubmit, onExamClosedManually } from '../services/socket';
+import { joinExamRoom, leaveExamRoom, emitExamStart, emitExamSubmit, onExamClosedManually, emitProctorAlert } from '../services/socket';
 import { getCurrentUser } from '../services/authService';
 
 export default function ExamInterface() {
@@ -68,7 +68,10 @@ export default function ExamInterface() {
             }
         });
 
-        return cleanup;
+        return () => {
+            cleanup();
+            leaveExamRoom(examId);
+        };
     }, [examId, handleSubmit]);
 
     useEffect(() => {
@@ -86,6 +89,12 @@ export default function ExamInterface() {
                 // 3. Load progress
                 if (session.answers) {
                     setAnswers(session.answers);
+                }
+                if (session.flagged) {
+                    setFlagged(session.flagged);
+                }
+                if (session.timeSpent) {
+                    setQuestionTimeSpent(session.timeSpent);
                 }
 
                 // Calculate time left from start time and duration, synced with server
@@ -130,8 +139,9 @@ export default function ExamInterface() {
 
         // 2. Periodic Progress Sync (every 30 seconds)
         const syncInterval = setInterval(() => {
-            if (Object.keys(answers).length > 0) {
-                updateExamProgress(examId, answers, questionTimeSpent).catch(console.error);
+            if (Object.keys(answers).length > 0 || Object.keys(flagged).length > 0) {
+                updateTimeSpent(); // Refresh time spent for current question before syncing
+                updateExamProgress(examId, answers, questionTimeSpent, flagged).catch(console.error);
             }
         }, 30000);
 
@@ -139,7 +149,7 @@ export default function ExamInterface() {
             clearInterval(timer);
             clearInterval(syncInterval);
         };
-    }, [exam, examId, answers]);
+    }, [exam, examId, answers, flagged, questionTimeSpent]);
 
     const formatTime = (seconds: number) => {
         const h = Math.floor(seconds / 3600);
@@ -165,7 +175,8 @@ export default function ExamInterface() {
         setAnswers((prev) => {
             const newAnswers = { ...prev, [questionId]: optionIndex };
             if (examId) {
-                updateExamProgress(examId, newAnswers, questionTimeSpent).catch(console.error);
+                updateTimeSpent(); // Capture time spent so far on this question
+                updateExamProgress(examId, newAnswers, questionTimeSpent, flagged).catch(console.error);
             }
             return newAnswers;
         });
@@ -176,6 +187,113 @@ export default function ExamInterface() {
         setCurrentQuestionIndex(newIndex);
         if (window.innerWidth < 1024) setIsSidebarOpen(false);
     };
+
+    const [showCheatWarning, setShowCheatWarning] = useState<string | null>(null);
+    const [violationCount, setViolationCount] = useState(0);
+
+    const triggerAlert = useCallback((type: string, message: string) => {
+        setViolationCount(prev => prev + 1);
+        setShowCheatWarning(message);
+
+        // Notification system: Alert student locally
+        setTimeout(() => setShowCheatWarning(null), 5000);
+
+        // Alert Admin via Socket
+        if (examId) {
+            const user = getCurrentUser();
+            if (user?._id) {
+                emitProctorAlert(examId, user._id, type, message);
+            }
+        }
+    }, [examId]);
+
+    const enterFullscreen = useCallback(() => {
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen().catch(() => {
+                triggerAlert('Fullscreen Blocked', 'Please enable fullscreen to continue the exam.');
+            });
+        }
+    }, [triggerAlert]);
+
+    useEffect(() => {
+        if (!loading && exam) {
+            const config = exam.proctoringConfig || {
+                enableTabLock: true,
+                enableFullscreen: true,
+                enableInputLock: true
+            };
+
+            // 1. Initial Fullscreen Prompt
+            if (config.enableFullscreen) {
+                enterFullscreen();
+            }
+
+            // 2. Tab/Window Switched Detection
+            const handleVisibilityChange = () => {
+                if (config.enableTabLock && document.hidden) {
+                    triggerAlert('Tab Switched', 'Warning: Tab switching is strictly prohibited.');
+                }
+            };
+
+            const handleBlur = () => {
+                if (config.enableTabLock) {
+                    triggerAlert('Window Blur', 'Warning: Focus lost from exam window.');
+                }
+            };
+
+            // 3. Fullscreen Exit Detection
+            const handleFullscreenChange = () => {
+                if (config.enableFullscreen && !document.fullscreenElement) {
+                    triggerAlert('Fullscreen Exit', 'You must remain in fullscreen mode during the exam.');
+                }
+            };
+
+            // 4. Input Blocking (Keyboard & Mouse)
+            const handleContextMenu = (e: MouseEvent) => {
+                if (config.enableInputLock) e.preventDefault();
+            };
+
+            const handleKeyDown = (e: KeyboardEvent) => {
+                if (!config.enableInputLock) return;
+
+                // Block PrintScreen, F12 (DevTools), Ctrl+Shift+I (DevTools), Ctrl+U (Source), Ctrl+P (Print)
+                const forbiddenKeys = ['F12', 'PrintScreen'];
+                const ctrlKeys = ['c', 'v', 'u', 'i', 'p', 's', 'j'];
+
+                if (forbiddenKeys.includes(e.key) || (e.ctrlKey && ctrlKeys.includes(e.key.toLowerCase()))) {
+                    e.preventDefault();
+                    triggerAlert('Keyboard Shortcut', `Unauthorized keyboard shortcut detected: ${e.key}`);
+                }
+            };
+
+            // 5. Copy/Paste Blocking
+            const handleCopyPaste = (e: ClipboardEvent) => {
+                if (config.enableInputLock) {
+                    e.preventDefault();
+                    triggerAlert('Clipboard', 'Copying and pasting is not allowed.');
+                }
+            };
+
+            window.addEventListener('visibilitychange', handleVisibilityChange);
+            window.addEventListener('blur', handleBlur);
+            document.addEventListener('fullscreenchange', handleFullscreenChange);
+            window.addEventListener('contextmenu', handleContextMenu);
+            window.addEventListener('keydown', handleKeyDown);
+            window.addEventListener('copy', handleCopyPaste);
+            window.addEventListener('paste', handleCopyPaste);
+
+            return () => {
+                window.removeEventListener('visibilitychange', handleVisibilityChange);
+                window.removeEventListener('blur', handleBlur);
+                document.removeEventListener('fullscreenchange', handleFullscreenChange);
+                window.removeEventListener('contextmenu', handleContextMenu);
+                window.removeEventListener('keydown', handleKeyDown);
+                window.removeEventListener('copy', handleCopyPaste);
+                window.removeEventListener('paste', handleCopyPaste);
+            };
+        }
+    }, [loading, exam, triggerAlert, enterFullscreen]);
 
     const toggleFlag = (questionId: string) => {
         setFlagged((prev) => ({ ...prev, [questionId]: !prev[questionId] }));
@@ -209,6 +327,17 @@ export default function ExamInterface() {
                 </div>
 
                 <div className="flex items-center gap-4">
+                    {!document.fullscreenElement && (exam.proctoringConfig?.enableFullscreen ?? true) && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="bg-orange-50 text-orange-600 border-orange-200 animate-pulse"
+                            onClick={enterFullscreen}
+                        >
+                            <ShieldAlert className="h-4 w-4 mr-2" />
+                            Go Fullscreen
+                        </Button>
+                    )}
                     <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-mono font-medium ${timeLeft < 300 ? 'bg-red-50 text-error animate-pulse' : 'bg-blue-50 text-primary'
                         }`}>
                         <Clock className="h-5 w-5" />
@@ -382,6 +511,24 @@ export default function ExamInterface() {
                     </div>
                 </main>
             </div>
+
+            {/* Cheating Warning Overlay */}
+            <AnimatePresence>
+                {showCheatWarning && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] bg-red-600 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 border-2 border-white/20 backdrop-blur-md"
+                    >
+                        <AlertCircle className="h-8 w-8 animate-bounce" />
+                        <div>
+                            <p className="font-bold text-lg">{showCheatWarning}</p>
+                            <p className="text-sm opacity-90">This incident has been reported to the proctor. Violation #{violationCount}</p>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Submit Confirmation Modal */}
             <AnimatePresence>

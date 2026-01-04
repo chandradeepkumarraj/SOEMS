@@ -13,6 +13,7 @@ export default function UserList({ refreshTrigger }: UserListProps) {
     const [subgroups, setSubgroups] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedRole, setSelectedRole] = useState<'all' | 'student' | 'teacher' | 'admin' | 'proctor'>('all');
     const [showAddModal, setShowAddModal] = useState(false);
 
     // New User Form State
@@ -94,10 +95,16 @@ export default function UserList({ refreshTrigger }: UserListProps) {
         }
     };
 
-    const filteredUsers = users.filter((u: any) =>
-        u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredUsers = users.filter((u: any) => {
+        const matchesSearch =
+            u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (u.rollNo && u.rollNo.toLowerCase().includes(searchTerm.toLowerCase()));
+
+        const matchesRole = selectedRole === 'all' || u.role === selectedRole;
+
+        return matchesSearch && matchesRole;
+    });
 
     return (
         <div className="space-y-6">
@@ -113,6 +120,17 @@ export default function UserList({ refreshTrigger }: UserListProps) {
                     />
                 </div>
                 <div className="flex gap-2">
+                    <select
+                        value={selectedRole}
+                        onChange={(e) => setSelectedRole(e.target.value as any)}
+                        className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                    >
+                        <option value="all">All Roles</option>
+                        <option value="student">Students</option>
+                        <option value="teacher">Teachers</option>
+                        <option value="admin">Admins</option>
+                        <option value="proctor">Proctors</option>
+                    </select>
                     <Button variant="outline" onClick={() => setShowAddModal(true)}>
                         <UserPlus className="h-4 w-4 mr-2" />
                         Add User
@@ -127,15 +145,15 @@ export default function UserList({ refreshTrigger }: UserListProps) {
             )}
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-gray-50 text-gray-500 text-sm">
+                <div className="overflow-x-auto max-h-[600px] overflow-y-auto custom-scrollbar">
+                    <table className="w-full text-left sticky-header">
+                        <thead className="bg-gray-50 text-gray-500 text-sm sticky top-0 z-10 shadow-sm">
                             <tr>
-                                <th className="px-6 py-4 font-medium">Name</th>
-                                <th className="px-6 py-4 font-medium">Role</th>
-                                <th className="px-6 py-4 font-medium">Email</th>
-                                <th className="px-6 py-4 font-medium">Roll No</th>
-                                <th className="px-6 py-4 font-medium text-right">Actions</th>
+                                <th className="px-6 py-4 font-medium bg-gray-50">Name</th>
+                                <th className="px-6 py-4 font-medium bg-gray-50">Role</th>
+                                <th className="px-6 py-4 font-medium bg-gray-50">Email</th>
+                                <th className="px-6 py-4 font-medium bg-gray-50">Roll No</th>
+                                <th className="px-6 py-4 font-medium text-right bg-gray-50">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -260,14 +278,23 @@ export default function UserList({ refreshTrigger }: UserListProps) {
                                         className="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary"
                                         value={newUser.password}
                                         onChange={e => setNewUser({ ...newUser, password: e.target.value })}
+                                        placeholder="Min 6 chars"
                                     />
                                 </div>
-                                <div>
+                                <div className={newUser.role !== 'student' ? 'col-span-1' : ''}>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
                                     <select
                                         className="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary"
                                         value={newUser.role}
-                                        onChange={e => setNewUser({ ...newUser, role: e.target.value as any })}
+                                        onChange={e => {
+                                            const role = e.target.value;
+                                            setNewUser({
+                                                ...newUser,
+                                                role: role as any,
+                                                // Clear student fields if switching to non-student
+                                                ...(role !== 'student' ? { rollNo: '', groupId: '', subgroupId: '' } : {})
+                                            });
+                                        }}
                                     >
                                         <option value="student">Student</option>
                                         <option value="teacher">Teacher</option>
@@ -275,6 +302,18 @@ export default function UserList({ refreshTrigger }: UserListProps) {
                                         <option value="proctor">Proctor</option>
                                     </select>
                                 </div>
+                                {newUser.role !== 'student' && (
+                                    <div className="col-span-2">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                                        <input
+                                            required
+                                            className="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary"
+                                            value={newUser.phoneNumber}
+                                            onChange={e => setNewUser({ ...newUser, phoneNumber: e.target.value })}
+                                            placeholder="10 digit mobile number"
+                                        />
+                                    </div>
+                                )}
                                 {newUser.role === 'student' && (
                                     <>
                                         <div>

@@ -41,7 +41,8 @@ export default function Register() {
                 name: `${formData.firstName} ${formData.lastName}`,
                 email: formData.email,
                 password: formData.password,
-                role
+                role,
+                institution: formData.institution
             });
             navigate('/dashboard');
         } catch (err: any) {

@@ -67,7 +67,7 @@ export default function UserManagementPage() {
     };
 
     const handleDeleteGroup = async (id: string, name: string) => {
-        if (window.confirm(`Are you sure you want to delete group "${name}"?\n\nWARNING: This will delete all subgroups and unlink all users in this group.`)) {
+        if (window.confirm(`Are you sure you want to delete group "${name}"?\n\nCRITICAL WARNING: This will PERMANENTLY delete ALL subgroups, students, and their exam results belonging to this group. This action cannot be undone.`)) {
             try {
                 await deleteGroup(id);
                 fetchHierarchy();
@@ -79,7 +79,7 @@ export default function UserManagementPage() {
     };
 
     const handleDeleteSubgroup = async (id: string, name: string) => {
-        if (window.confirm(`Are you sure you want to delete session "${name}"?\n\nThis will unlink all users in this session.`)) {
+        if (window.confirm(`Are you sure you want to delete session "${name}"?\n\nCRITICAL WARNING: This will PERMANENTLY delete ALL students and their exam results belonging to this session. This action cannot be undone.`)) {
             try {
                 await deleteSubgroup(id);
                 fetchHierarchy();

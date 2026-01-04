@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import { z } from 'zod';
+import fs from 'fs';
+import bcrypt from 'bcryptjs';
 
 // Generate JWT Token
 const generateToken = (id: string) => {
@@ -19,6 +21,7 @@ export const registerUser = async (req: Request, res: Response) => {
         email: z.string().email(),
         password: z.string().min(6),
         role: z.enum(['student', 'teacher', 'admin', 'proctor']).optional(),
+        institution: z.string().optional(),
     });
 
     const validation = schema.safeParse(req.body);
@@ -27,7 +30,7 @@ export const registerUser = async (req: Request, res: Response) => {
         return res.status(400).json({ message: 'Invalid input', errors: validation.error.errors });
     }
 
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, institution } = req.body;
 
     try {
         const userExists = await User.findOne({ email });
@@ -41,6 +44,7 @@ export const registerUser = async (req: Request, res: Response) => {
             email,
             password,
             role: role || 'student',
+            institution
         });
 
         if (user) {
@@ -55,8 +59,11 @@ export const registerUser = async (req: Request, res: Response) => {
             res.status(400).json({ message: 'Invalid user data' });
         }
     } catch (error: any) {
-        const fs = require('fs');
-        fs.appendFileSync('error_log.txt', `Register Error: ${error.message}\nStack: ${error.stack}\n`);
+        try {
+            fs.appendFileSync('error_log.txt', `Register Error: ${error.message}\nStack: ${error.stack}\n`);
+        } catch (e) {
+            console.error('Failed to write to error log:', e);
+        }
         res.status(500).json({ message: error.message });
     }
 };
@@ -65,6 +72,16 @@ export const registerUser = async (req: Request, res: Response) => {
 // @route   POST /api/auth/login
 // @access  Public
 export const loginUser = async (req: Request, res: Response) => {
+    const schema = z.object({
+        email: z.string().email(),
+        password: z.string().min(1),
+    });
+
+    const validation = schema.safeParse(req.body);
+    if (!validation.success) {
+        return res.status(400).json({ message: 'Invalid input', errors: validation.error.errors });
+    }
+
     const { email, password } = req.body;
 
     try {
@@ -91,6 +108,18 @@ export const loginUser = async (req: Request, res: Response) => {
 // @access  Private (Admin)
 export const setupAdminRecovery = async (req: any, res: Response) => {
     try {
+        const schema = z.object({
+            questions: z.array(z.object({
+                question: z.string().min(5),
+                answer: z.string().min(1)
+            })).length(3)
+        });
+
+        const validation = schema.safeParse(req.body);
+        if (!validation.success) {
+            return res.status(400).json({ message: 'Invalid input', errors: validation.error.errors });
+        }
+
         const { questions } = req.body; // Array of { question, answer }
 
         if (!questions || questions.length !== 3) {
@@ -104,7 +133,6 @@ export const setupAdminRecovery = async (req: any, res: Response) => {
         }
 
         // Hash the answers before storing
-        const bcrypt = require('bcryptjs');
         const hashedQuestions = await Promise.all(
             questions.map(async (q: any) => ({
                 question: q.question,
@@ -126,6 +154,17 @@ export const setupAdminRecovery = async (req: any, res: Response) => {
 // @access  Public
 export const resetAdminPassword = async (req: Request, res: Response) => {
     try {
+        const schema = z.object({
+            email: z.string().email(),
+            answers: z.array(z.string().min(1)).length(3),
+            newPassword: z.string().min(6)
+        });
+
+        const validation = schema.safeParse(req.body);
+        if (!validation.success) {
+            return res.status(400).json({ message: 'Invalid input', errors: validation.error.errors });
+        }
+
         const { email, answers, newPassword } = req.body;
 
         const user = await User.findOne({ email });
@@ -143,7 +182,6 @@ export const resetAdminPassword = async (req: Request, res: Response) => {
         }
 
         // Verify all answers
-        const bcrypt = require('bcryptjs');
         for (let i = 0; i < 3; i++) {
             const isMatch = await bcrypt.compare(
                 answers[i].toLowerCase().trim(),

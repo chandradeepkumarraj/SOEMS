@@ -7,6 +7,7 @@ export interface IExamSession extends Document {
     lastSyncTime: Date;
     answers: Map<string, number>; // questionId -> selectedOption
     timeSpent: Map<string, number>; // questionId -> seconds
+    flagged: Map<string, boolean>; // questionId -> boolean
     status: 'in-progress' | 'completed';
     isExpired: boolean;
 }
@@ -24,6 +25,11 @@ const ExamSessionSchema: Schema = new Schema({
     timeSpent: {
         type: Map,
         of: Number,
+        default: {}
+    },
+    flagged: {
+        type: Map,
+        of: Boolean,
         default: {}
     },
     status: {

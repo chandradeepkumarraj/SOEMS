@@ -23,6 +23,15 @@ connectDB().then(() => {
     seedAdmin();
 });
 
+// Check environment variables
+const requiredEnv = ['MONGO_URI', 'JWT_SECRET'];
+requiredEnv.forEach(env => {
+    if (!process.env[env]) {
+        console.error(`FATAL ERROR: Environment variable ${env} is not defined.`);
+        process.exit(1);
+    }
+});
+
 const app = express();
 const PORT = process.env.PORT || 5001;
 

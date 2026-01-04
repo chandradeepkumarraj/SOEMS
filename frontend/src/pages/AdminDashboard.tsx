@@ -5,7 +5,6 @@ import SystemHealth from '../components/admin/SystemHealth';
 import { getUsers } from '../services/adminService';
 
 export default function AdminDashboard() {
-    const [activeTab, setActiveTab] = useState<'system'>('system');
     const [stats, setStats] = useState([
         { label: 'Total Users', value: '...', icon: Users, color: 'bg-blue-500' },
         { label: 'Active Exams', value: '...', icon: Activity, color: 'bg-emerald-500' },

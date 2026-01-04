@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import User from '../models/User';
 import Exam from '../models/Exam';
 import Result from '../models/Result';
@@ -22,6 +23,7 @@ export const getUserProfile = async (req: any, res: Response) => {
                 rollNo: user.rollNo,
                 phoneNumber: user.phoneNumber,
                 address: user.address,
+                institution: user.institution,
                 group: user.groupId,
                 subgroup: user.subgroupId,
                 createdAt: user.createdAt
@@ -53,6 +55,7 @@ export const updateUserProfile = async (req: any, res: Response) => {
                 user.phoneNumber = req.body.phoneNumber !== undefined ? req.body.phoneNumber : user.phoneNumber;
                 user.address = req.body.address !== undefined ? req.body.address : user.address;
                 user.bio = req.body.bio !== undefined ? req.body.bio : user.bio;
+                user.institution = req.body.institution !== undefined ? req.body.institution : user.institution;
             }
 
             if (req.body.password) {
@@ -80,43 +83,57 @@ export const updateUserProfile = async (req: any, res: Response) => {
 // @access  Private (Teacher)
 export const getMyStudents = async (req: any, res: Response) => {
     try {
-        const teacherId = req.user._id;
-        // 1. Get exams by teacher
+        const teacherId = new mongoose.Types.ObjectId(req.user._id);
+
+        // 1. Get exams created by this teacher
         const exams = await Exam.find({ creatorId: teacherId }).select('_id');
         const examIds = exams.map(e => e._id);
 
-        // 2. Get results
-        const results = await Result.find({ examId: { $in: examIds } }).populate('studentId', 'name email rollNo');
+        if (examIds.length === 0) {
+            return res.json([]);
+        }
 
-        // 3. Unique students + stats
-        const studentStats = new Map();
-
-        results.forEach((r: any) => {
-            if (!r.studentId) return;
-            const sId = r.studentId._id.toString();
-            if (!studentStats.has(sId)) {
-                studentStats.set(sId, {
-                    _id: sId,
-                    name: r.studentId.name,
-                    email: r.studentId.email,
-                    rollNo: r.studentId.rollNo,
-                    examsTaken: 0,
-                    totalScore: 0,
-                    totalPoints: 0
-                });
+        // 2. Aggregate results to get student stats
+        const studentStats = await Result.aggregate([
+            { $match: { examId: { $in: examIds } } },
+            {
+                $group: {
+                    _id: '$studentId',
+                    examsTaken: { $sum: 1 },
+                    totalScore: { $sum: '$score' },
+                    totalPoints: { $sum: '$totalPoints' }
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'student'
+                }
+            },
+            { $unwind: '$student' },
+            {
+                $project: {
+                    _id: 1,
+                    name: '$student.name',
+                    email: '$student.email',
+                    rollNo: '$student.rollNo',
+                    examsTaken: 1,
+                    totalScore: 1,
+                    totalPoints: 1,
+                    avgScore: {
+                        $cond: [
+                            { $gt: ['$totalPoints', 0] },
+                            { $round: [{ $multiply: [{ $divide: ['$totalScore', '$totalPoints'] }, 100] }, 0] },
+                            0
+                        ]
+                    }
+                }
             }
-            const stats = studentStats.get(sId);
-            stats.examsTaken += 1;
-            stats.totalScore += r.score;
-            stats.totalPoints += r.totalPoints;
-        });
+        ]);
 
-        const students = Array.from(studentStats.values()).map(s => ({
-            ...s,
-            avgScore: s.totalPoints > 0 ? Math.round((s.totalScore / s.totalPoints) * 100) : 0
-        }));
-
-        res.json(students);
+        res.json(studentStats);
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }

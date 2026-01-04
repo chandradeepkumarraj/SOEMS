@@ -129,6 +129,8 @@ export const startExam = async (req: any, res: Response) => {
             startTime: now,
             lastSyncTime: now,
             answers: {},
+            timeSpent: {},
+            flagged: {},
             status: 'in-progress'
         });
 
@@ -148,14 +150,15 @@ export const updateSessionProgress = async (req: any, res: Response) => {
     try {
         const { id: examId } = req.params;
         const studentId = req.user._id;
-        const { answers, timeSpent } = req.body;
+        const { answers, timeSpent, flagged } = req.body;
 
         const session = await ExamSession.findOneAndUpdate(
             { studentId, examId, status: 'in-progress' },
             {
                 $set: {
-                    answers: answers,
-                    timeSpent: timeSpent,
+                    answers: answers || {},
+                    timeSpent: timeSpent || {},
+                    flagged: flagged || {},
                     lastSyncTime: new Date()
                 }
             },
@@ -178,7 +181,7 @@ export const updateSessionProgress = async (req: any, res: Response) => {
 // @access  Private (Teacher/Admin)
 export const createExam = async (req: any, res: Response) => {
     try {
-        const { title, description, questions, duration, startTime, endTime, status, allowedGroups, allowedSubgroups } = req.body;
+        const { title, description, questions, duration, startTime, endTime, status, allowedGroups, allowedSubgroups, proctoringConfig } = req.body;
 
         const exam = await Exam.create({
             title,
@@ -190,6 +193,7 @@ export const createExam = async (req: any, res: Response) => {
             status: status || 'draft',
             allowedGroups: allowedGroups || [],
             allowedSubgroups: allowedSubgroups || [],
+            proctoringConfig,
             creatorId: req.user._id
         });
 
@@ -291,28 +295,43 @@ export const updateExam = async (req: any, res: Response) => {
     try {
         const exam = await Exam.findById(req.params.id);
 
-        if (exam) {
-            // Check ownership
-            if (exam.creatorId.toString() !== req.user._id.toString()) {
-                return res.status(401).json({ message: 'Not authorized' });
-            }
-
-            exam.title = req.body.title || exam.title;
-            exam.description = req.body.description || exam.description;
-            if (req.body.questions) exam.questions = req.body.questions;
-            if (req.body.duration) exam.duration = req.body.duration;
-            if (req.body.startTime) exam.startTime = req.body.startTime;
-            if (req.body.endTime) exam.endTime = req.body.endTime;
-            if (req.body.status) exam.status = req.body.status;
-            if (req.body.resultsPublished !== undefined) exam.resultsPublished = req.body.resultsPublished;
-            if (req.body.allowedGroups) exam.allowedGroups = req.body.allowedGroups;
-            if (req.body.allowedSubgroups) exam.allowedSubgroups = req.body.allowedSubgroups;
-
-            const updatedExam = await exam.save();
-            res.json(updatedExam);
-        } else {
-            res.status(404).json({ message: 'Exam not found' });
+        if (!exam) {
+            return res.status(404).json({ message: 'Exam not found' });
         }
+
+        // Check ownership
+        if (exam.creatorId.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Not authorized to update this exam' });
+        }
+
+        const {
+            title,
+            description,
+            questions,
+            duration,
+            startTime,
+            endTime,
+            status,
+            resultsPublished,
+            allowedGroups,
+            allowedSubgroups,
+            proctoringConfig
+        } = req.body;
+
+        exam.title = title || exam.title;
+        exam.description = description !== undefined ? description : exam.description;
+        exam.questions = questions || exam.questions;
+        exam.duration = duration || exam.duration;
+        exam.startTime = startTime || exam.startTime;
+        exam.endTime = endTime || exam.endTime;
+        exam.status = status || exam.status;
+        exam.resultsPublished = resultsPublished !== undefined ? resultsPublished : exam.resultsPublished;
+        exam.allowedGroups = allowedGroups || exam.allowedGroups;
+        exam.allowedSubgroups = allowedSubgroups || exam.allowedSubgroups;
+        exam.proctoringConfig = proctoringConfig || exam.proctoringConfig;
+
+        const updatedExam = await exam.save();
+        res.json(updatedExam);
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
@@ -326,8 +345,12 @@ export const deleteExam = async (req: Request, res: Response) => {
         const exam = await Exam.findById(req.params.id);
 
         if (exam) {
+            // Cascade: Delete Sessions and Results associated with this exam
+            await ExamSession.deleteMany({ examId: exam._id });
+            await Result.deleteMany({ examId: exam._id });
+
             await exam.deleteOne();
-            res.json({ message: 'Exam removed' });
+            res.json({ message: 'Exam and all associated sessions/results removed' });
         } else {
             res.status(404).json({ message: 'Exam not found' });
         }
@@ -379,7 +402,7 @@ export const getExamAnalytics = async (req: any, res: Response) => {
             return res.status(404).json({ message: 'Exam not found' });
         }
 
-        // Calculate total eligible students
+        // 1. Calculate total eligible students
         let eligibleQuery: any = { role: 'student' };
         if (exam.allowedGroups && exam.allowedGroups.length > 0) {
             eligibleQuery.groupId = { $in: exam.allowedGroups };
@@ -390,19 +413,19 @@ export const getExamAnalytics = async (req: any, res: Response) => {
 
         const totalEligibleCount = await User.countDocuments(eligibleQuery);
 
-        // Active students (in-progress sessions)
+        // 2. Active students (in-progress sessions)
         const activeCount = await ExamSession.countDocuments({
             examId: exam._id,
             status: 'in-progress'
         });
 
-        // Finished students (completed results)
-        const finishedCount = await Result.countDocuments({
-            examId: exam._id
-        });
+        // 3. Detailed analysis of results - POPULATE studentId to avoid N+1 queries
+        const allResults = await Result.find({ examId: exam._id })
+            .populate('studentId', 'name')
+            .populate('answers.questionId', 'text subject difficulty')
+            .lean();
 
-        // Detailed analysis of results
-        const allResults = await Result.find({ examId: exam._id }).populate('answers.questionId', 'text subject difficulty');
+        const finishedCount = allResults.length;
 
         const questionStats: Record<string, {
             id: string,
@@ -414,7 +437,7 @@ export const getExamAnalytics = async (req: any, res: Response) => {
         }> = {};
 
         // Initialize questionStats from exam questions
-        const examQuestions = await Question.find({ _id: { $in: exam.questions } });
+        const examQuestions = await Question.find({ _id: { $in: exam.questions } }).lean();
         examQuestions.forEach(q => {
             questionStats[q._id.toString()] = {
                 id: q._id.toString(),
@@ -436,12 +459,11 @@ export const getExamAnalytics = async (req: any, res: Response) => {
         ];
 
         let topPerformer: any = null;
-
         let globalFastestCorrect: any = null;
 
-        // Aggregate stats from all results
+        // Aggregate stats from all results (results are already populated)
         for (const resDoc of allResults) {
-            const student = await User.findById(resDoc.studentId).select('name');
+            const studentName = (resDoc.studentId as any)?.name || 'Unknown';
             const percentage = (resDoc.score / (resDoc.totalPoints || 1)) * 100;
             totalScoreSum += resDoc.score;
             allScores.push(resDoc.score);
@@ -457,7 +479,7 @@ export const getExamAnalytics = async (req: any, res: Response) => {
             const totalTime = resDoc.answers.reduce((acc: number, curr: any) => acc + (curr.timeSpent || 0), 0);
             if (!topPerformer || resDoc.score > topPerformer.score || (resDoc.score === topPerformer.score && totalTime < topPerformer.totalTime)) {
                 topPerformer = {
-                    name: student?.name || 'Unknown',
+                    name: studentName,
                     score: resDoc.score,
                     totalPoints: resDoc.totalPoints,
                     totalTime
@@ -473,7 +495,7 @@ export const getExamAnalytics = async (req: any, res: Response) => {
                         questionStats[qId].correctCount++;
 
                         const responder = {
-                            studentName: student?.name || 'Unknown',
+                            studentName,
                             time: ans.timeSpent,
                             questionText: questionStats[qId].text
                         };
