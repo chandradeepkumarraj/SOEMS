@@ -1,0 +1,131 @@
+
+    <!-- CHAPTER 5 -->
+    <section>
+        <h1>CHAPTER 5: TESTING AND RESULTS</h1>
+
+        <h2>5.1 Testing Strategy</h2>
+        <p>Testing ensures the system meets requirements and is defect-free. We employed a hybrid strategy encompassing Unit Testing and Integration Testing.</p>
+
+        <h3>5.1.1 Unit Testing</h3>
+        <p>Individual components (e.g., the Login form, the Timer component) were tested in isolation using <strong>Jurist</strong> and <strong>React Testing Library</strong>.</p>
+
+        <h3>5.1.2 Integration Testing</h3>
+        <p>Verified the data flow between modules, specifically the interaction between the Exam Interface and the Backend API upon submission.</p>
+
+        <h2>5.2 Test Cases</h2>
+        
+        <table>
+            <tr>
+                <th>TC ID</th>
+                <th>Test Scenario</th>
+                <th>Expected Result</th>
+                <th>Actual Result</th>
+                <th>Status</th>
+            </tr>
+            <tr>
+                <td>TC_01</td>
+                <td>User Login with valid data</td>
+                <td>Redirect to Dashboard</td>
+                <td>Redirected to Dashboard</td>
+                <td><span style="color:green; font-weight:bold;">PASS</span></td>
+            </tr>
+            <tr>
+                <td>TC_02</td>
+                <td>User Login with invalid pass</td>
+                <td>Show error "Invalid Credentials"</td>
+                <td>Error message displayed</td>
+                <td><span style="color:green; font-weight:bold;">PASS</span></td>
+            </tr>
+            <tr>
+                <td>TC_03</td>
+                <td>Student attempts start exam before time</td>
+                <td>Block access with "Not yet started"</td>
+                <td>Access blocked</td>
+                <td><span style="color:green; font-weight:bold;">PASS</span></td>
+            </tr>
+            <tr>
+                <td>TC_04</td>
+                <td>Tab switching during exam</td>
+                <td>Warning alert & violation logged</td>
+                <td>Alert shown, count incremented</td>
+                <td><span style="color:green; font-weight:bold;">PASS</span></td>
+            </tr>
+            <tr>
+                <td>TC_05</td>
+                <td>Admin creates user via CSV</td>
+                <td>Users populated in DB</td>
+                <td>Users created successfully</td>
+                <td><span style="color:green; font-weight:bold;">PASS</span></td>
+            </tr>
+        </table>
+
+        <h2>5.3 Results (Screenshots)</h2>
+        
+        <div class="diagram-container">
+            <div style="height: 300px; background-color: #eee; display: flex; align-items: center; justify-content: center; border: 2px dashed #ccc;">
+                [Screenshot: Landing Page]
+            </div>
+            <div class="diagram-caption">Figure 5.1: Landing Page Interface</div>
+        </div>
+
+        <div class="diagram-container">
+            <div style="height: 300px; background-color: #eee; display: flex; align-items: center; justify-content: center; border: 2px dashed #ccc;">
+                [Screenshot: Student Dashboard]
+            </div>
+            <div class="diagram-caption">Figure 5.2: Student Dashboard</div>
+        </div>
+
+        <div class="diagram-container">
+            <div style="height: 300px; background-color: #eee; display: flex; align-items: center; justify-content: center; border: 2px dashed #ccc;">
+                [Screenshot: Exam Interface with Fullscreen]
+            </div>
+            <div class="diagram-caption">Figure 5.3: Secure Exam Interface</div>
+        </div>
+        
+         <div class="diagram-container">
+            <div style="height: 300px; background-color: #eee; display: flex; align-items: center; justify-content: center; border: 2px dashed #ccc;">
+                [Screenshot: Admin Live Monitoring]
+            </div>
+            <div class="diagram-caption">Figure 5.4: Live Proctoring Dashboard</div>
+        </div>
+    </section>
+
+    <div class="page-break"></div>
+
+    <!-- CHAPTER 6 -->
+    <section>
+        <h1>CHAPTER 6: CONCLUSION AND FUTURE SCOPE</h1>
+
+        <h2>6.1 Conclusion</h2>
+        <p>The <strong>SOEMS</strong> project successfully achieves its primary objective of creating a secure, scalable, and user-friendly online examination platform. By leveraging the MERN stack and Socket.io, we have addressed key challenges in remote assessment, particularly regarding integrity and real-time monitoring.</p>
+        <p>The system effectively differentiates between roles, ensuring data security and streamlined workflows. The implementation of auto-proctoring features significantly reduces the burden on human proctors while maintaining high standards of exam integrity.</p>
+
+        <h2>6.2 Limitations</h2>
+        <ul>
+            <li>Requires a stable internet connection for real-time features.</li>
+            <li>Webcam-based proctoring relies on client-side permissions.</li>
+        </ul>
+
+        <h2>6.3 Future Scope</h2>
+        <ul>
+            <li><strong>AI Integration:</strong> Analyzing student facial expressions for stress or suspicious behavior using Machine Learning.</li>
+            <li><strong>Mobile App:</strong> Developing a native mobile application for better access on phones.</li>
+            <li><strong>Offline Mode:</strong> PWA features to allow syncing answers when connection restores.</li>
+        </ul>
+    </section>
+
+    <div class="page-break"></div>
+
+    <!-- REFERENCES -->
+    <section>
+        <h1 style="text-align: center;">REFERENCES / BIBLIOGRAPHY</h1>
+        <ol>
+            <li>React Documentation - https://reactjs.org/</li>
+            <li>Node.js Documentation - https://nodejs.org/en/docs/</li>
+            <li>MongoDB Manual - https://www.mongodb.com/docs/manual/</li>
+            <li>Socket.io Documentation - https://socket.io/docs/v4/</li>
+            <li>"Web Development with Node and Express" by Ethan Brown (O'Reilly Media)</li>
+        </ol>
+    </section>
+</body>
+</html>

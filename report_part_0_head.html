@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOEMS - Comprehensive Project Report</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.0/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --text-color: #333;
+            --light-bg: #f8fafc;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            max-width: 210mm; /* A4 width */
+            margin: 0 auto;
+            background-color: white;
+            padding: 2cm;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            color: var(--secondary-color);
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 0.2em;
+            margin-top: 0;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            font-size: 1.8em;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.2em;
+            page-break-after: avoid;
+        }
+
+        p {
+            margin-bottom: 1em;
+            text-align: justify;
+        }
+
+        /* Title Page Styling */
+        .title-page {
+            height: 250mm; /* Full page approx */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            page-break-after: always;
+        }
+
+        .university-logo {
+            width: 150px;
+            height: 150px;
+            background-color: #eee;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 2rem;
+            border: 2px solid var(--primary-color);
+        }
+
+        .project-title {
+            font-size: 3em;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .submission-text {
+            font-size: 1.2em;
+            margin: 2rem 0;
+        }
+
+        /* Diagram Styling */
+        .diagram-container {
+            margin: 2rem 0;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--light-bg);
+            page-break-inside: avoid;
+            text-align: center;
+        }
+
+        .diagram-caption {
+            font-style: italic;
+            margin-top: 0.5rem;
+            font-weight: bold;
+            color: #666;
+        }
+
+        /* Code Styling */
+        pre {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+            page-break-inside: avoid;
+        }
+
+        /* Table Styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            page-break-inside: avoid;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--light-bg);
+        }
+
+        /* Certificate & specialized pages */
+        .cert-border {
+            border: 5px double var(--primary-color);
+            padding: 40px;
+            height: 90%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        /* Print Specifics */
+        @media print {
+            body {
+                width: 100%;
+                max-width: none;
+                margin: 0;
+                padding: 0;
+            }
+
+            .page-break {
+                page-break-before: always;
+            }
+
+            a {
+                text-decoration: none;
+                color: black;
+            }
+            
+            /* Ensure mermaid diagrams print */
+            .mermaid {
+                break-inside: avoid;
+            }
+        }
+
+        .toc-entry {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dotted #ccc;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>

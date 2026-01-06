@@ -1,0 +1,180 @@
+
+    <!-- CHAPTER 4 CONTINUED: SOURCE CODE LISTINGS -->
+    <div class="page-break"></div>
+    <section>
+        <h2>4.5 Key Source Code Listings</h2>
+        <p>This section provides the full source code for critical components of the system.</p>
+
+        <h3>4.5.1 Exam Model (Backend)</h3>
+        <p><strong>File:</strong> <code>backend/src/models/Exam.ts</code></p>
+        <pre>
+import mongoose, { Document, Schema } from 'mongoose';
+
+export interface IExam extends Document {
+    title: string;
+    description: string;
+    questions: mongoose.Schema.Types.ObjectId[];
+    duration: number; // in minutes
+    startTime: Date;
+    endTime: Date;
+    creatorId: mongoose.Schema.Types.ObjectId;
+    status: 'draft' | 'published' | 'archived' | 'closed';
+    allowedGroups?: mongoose.Types.ObjectId[];
+    proctoringConfig: {
+        enableTabLock: boolean;
+        enableFullscreen: boolean;
+        enableInputLock: boolean;
+        violationThreshold: number;
+    };
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+const ExamSchema: Schema = new Schema({
+    title: { type: String, required: true },
+    description: { type: String },
+    questions: [{ type: Schema.Types.ObjectId, ref: 'Question' }],
+    duration: { type: Number, required: true },
+    startTime: { type: Date, required: true },
+    endTime: { type: Date, required: true },
+    creatorId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    status: { 
+        type: String, 
+        enum: ['draft', 'published', 'archived', 'closed'], 
+        default: 'draft' 
+    },
+    allowedGroups: [{ type: Schema.Types.ObjectId, ref: 'Group' }],
+    proctoringConfig: {
+        enableTabLock: { type: Boolean, default: true },
+        enableFullscreen: { type: Boolean, default: true },
+        enableInputLock: { type: Boolean, default: true },
+        violationThreshold: { type: Number, default: 3 }
+    }
+}, { timestamps: true });
+
+export default mongoose.model&lt;IExam&gt;('Exam', ExamSchema);
+        </pre>
+
+        <h3>4.5.2 Exam Controller (Backend)</h3>
+        <p><strong>File:</strong> <code>backend/src/controllers/examController.ts</code> (Partial)</p>
+        <pre>
+export const createExam = async (req: AuthRequest, res: Response) => {
+    try {
+        const { title, description, duration, startTime, endTime, questions, proctoringConfig } = req.body;
+        
+        const newExam = new Exam({
+            title,
+            description,
+            duration,
+            startTime,
+            endTime,
+            questions,
+            proctoringConfig,
+            creatorId: req.user?._id
+        });
+
+        const savedExam = await newExam.save();
+        res.status(201).json(savedExam);
+    } catch (error) {
+        res.status(500).json({ message: 'Error creating exam', error });
+    }
+};
+
+export const submitExam = async (req: AuthRequest, res: Response) => {
+    try {
+        const { examId } = req.params;
+        const { answers } = req.body; // map of questionId -> selectedOption
+        const studentId = req.user?._id;
+
+        const exam = await Exam.findById(examId).populate('questions');
+        if (!exam) return res.status(404).json({ message: 'Exam not found' });
+
+        let score = 0;
+        const resultAnswers = [];
+
+        // Calculate score
+        for (const question of exam.questions as any[]) {
+            const selectedOption = answers[question._id.toString()];
+            const isCorrect = selectedOption === question.correctAnswer;
+            
+            if (isCorrect) score += 1; // Assuming 1 mark per question
+
+            resultAnswers.push({
+                questionId: question._id,
+                selectedOption,
+                isCorrect
+            });
+        }
+
+        const totalPoints = exam.questions.length;
+        
+        const result = new Result({
+            studentId,
+            examId,
+            score,
+            totalPoints,
+            answers: resultAnswers,
+            submittedAt: new Date()
+        });
+
+        await result.save();
+        res.status(200).json(result);
+
+    } catch (error) {
+        res.status(500).json({ message: 'Error submitting exam' });
+    }
+};
+        </pre>
+
+        <h3>4.5.3 Exam Interface Component (Frontend)</h3>
+        <p><strong>File:</strong> <code>frontend/src/pages/ExamInterface.tsx</code> (Partial)</p>
+        <pre>
+const ExamInterface = () => {
+    const { examId } = useParams();
+    const [questions, setQuestions] = useState([]);
+    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+    const [answers, setAnswers] = useState({});
+    
+    // Proctoring Hooks
+    useTabFocusMonitor((violation) => handleViolation(violation));
+    useFullscreenMonitor((violation) => handleViolation(violation));
+
+    const handleAnswer = (optionIndex) => {
+        setAnswers({
+            ...answers,
+            [questions[currentQuestionIndex]._id]: optionIndex
+        });
+    };
+
+    const submitExam = async () => {
+        if (confirm('Are you sure you want to submit?')) {
+            await api.post(`/exams/${examId}/submit`, { answers });
+            navigate('/dashboard');
+        }
+    };
+
+    return (
+        &lt;div className="exam-container"&gt;
+            &lt;div className="question-area"&gt;
+                &lt;h2&gt;Question {currentQuestionIndex + 1}&lt;/h2&gt;
+                &lt;p&gt;{questions[currentQuestionIndex]?.text}&lt;/p&gt;
+                
+                &lt;div className="options"&gt;
+                    {questions[currentQuestionIndex]?.options.map((opt, idx) => (
+                        &lt;button key={idx} onClick={() => handleAnswer(idx)}&gt;
+                            {opt}
+                        &lt;/button&gt;
+                    ))}
+                &lt;/div&gt;
+            &lt;/div&gt;
+            
+            &lt;div className="navigation"&gt;
+                &lt;button onClick={prevQuestion}&gt;Previous&lt;/button&gt;
+                &lt;button onClick={nextQuestion}&gt;Next&lt;/button&gt;
+                &lt;button onClick={submitExam} className="submit-btn"&gt;Submit&lt;/button&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+    );
+};
+        </pre>
+    </section>

@@ -1,0 +1,217 @@
+
+    <!-- CHAPTER 3 -->
+    <section>
+        <h1>CHAPTER 3: SYSTEM DESIGN</h1>
+        <p>System design is the process of defining the architecture, components, modules, interfaces, and data for a system to satisfy specified requirements. This chapter details the architectural decisions and visual models of SOEMS.</p>
+
+        <h2>3.1 System Architecture</h2>
+        <p>SOEMS follows a modern <strong>Three-Tier Architecture</strong>:</p>
+        <ol>
+            <li><strong>Presentation Layer (Client):</strong> Built with React, handling user interaction and UI rendering.</li>
+            <li><strong>Application Layer (Server):</strong> Built with Express.js and Node.js, processing business logic and API requests.</li>
+            <li><strong>Data Layer (Database):</strong> MongoDB, storing persistent data in JSON-like documents.</li>
+        </ol>
+
+        <div class="diagram-container">
+            <div class="mermaid">
+            graph TB
+                subgraph "Client Layer"
+                    A[React Frontend<br/>TypeScript + Tailwind CSS]
+                end
+                
+                subgraph "Application Layer"
+                    B[Express.js Server<br/>TypeScript + Node.js]
+                    C[Socket.io Server<br/>Real-time Communication]
+                end
+                
+                subgraph "Data Layer"
+                    D[(MongoDB Database<br/>Mongoose ODM)]
+                end
+                
+                subgraph "External Services"
+                    E[JWT Authentication]
+                    F[File Upload Service<br/>Multer]
+                end
+                
+                A <-->|REST API<br/>HTTP/HTTPS| B
+                A <-->|WebSocket<br/>Real-time Events| C
+                B --> D
+                C --> D
+                B --> E
+                B --> F
+            </div>
+            <div class="diagram-caption">Figure 3.1: High-Level System Architecture</div>
+        </div>
+
+        <div class="page-break"></div>
+
+        <h2>3.2 Data Flow Diagrams (DFD)</h2>
+        <p>The Data Flow Diagram (DFD) maps out the flow of information for any process or system. It uses defined symbols like rectangles, circles, and arrows.</p>
+
+        <h3>3.2.1 Level 0 DFD (Context Diagram)</h3>
+        <p>The context diagram shows the system as a single process interacting with external entities (Users).</p>
+
+        <div class="diagram-container">
+            <div class="mermaid">
+            flowchart LR
+                S[Student] <-->|Input/Results| Sys((SOEMS System))
+                T[Teacher] <-->|Exams/Reports| Sys
+                A[Admin] <-->|User Mgmt| Sys
+                P[Proctor] <-->|Monitoring| Sys
+            </div>
+            <div class="diagram-caption">Figure 3.2: Level 0 DFD</div>
+        </div>
+
+        <h3>3.2.2 Level 1 DFD - Exam Process</h3>
+        <p>This details the internal flow of the exam taking sub-system.</p>
+
+        <div class="diagram-container">
+            <div class="mermaid">
+            graph TB
+                A[Teacher Creates Exam] --> B[Exam Document Created]
+                B --> C[Questions Linked]
+                C --> D[Groups Assigned]
+                D --> E[Exam Published]
+                E --> F[Students View Exam]
+                F --> G[Student Starts Exam]
+                G --> H[Session Created]
+                H --> I[Answers Saved]
+                I --> J[Real-time Sync]
+                J --> K[Exam Submitted]
+                K --> L[Result Calculated]
+                L --> M[Result Stored]
+                M --> N[Teacher Views Analytics]
+            </div>
+            <div class="diagram-caption">Figure 3.3: Exam Lifecycle Data Flow</div>
+        </div>
+
+        <div class="page-break"></div>
+
+        <h2>3.3 Database Design</h2>
+        <p>SOEMS uses a NoSQL database (MongoDB). The schema is designed using <strong>Mongoose</strong> to enforce structure at the application level while maintaining flexibility.</p>
+
+        <h3>3.3.1 Entity Relationship (ER) Diagram</h3>
+        <p>The ER diagram illustrates the logical structure of the database.</p>
+
+        <div class="diagram-container">
+            <div class="mermaid">
+            erDiagram
+                USER ||--o{ EXAM : creates
+                USER ||--o{ QUESTION : creates
+                USER ||--o{ RESULT : submits
+                USER ||--o{ EXAM_SESSION : participates
+                USER }o--|| GROUP : belongs_to
+                EXAM ||--o{ QUESTION : contains
+                EXAM ||--o{ RESULT : generates
+                EXAM ||--o{ VIOLATION : monitors
+                
+                USER {
+                    ObjectId _id
+                    string name
+                    string email
+                    string role
+                }
+                
+                EXAM {
+                    ObjectId _id
+                    string title
+                    number duration
+                    date startTime
+                    ObjectId creatorId
+                }
+                
+                RESULT {
+                    ObjectId _id
+                    number score
+                    boolean isSuspended
+                }
+                
+                VIOLATION {
+                    string type
+                    date timestamp
+                }
+            </div>
+            <div class="diagram-caption">Figure 3.4: Entity Relationship Diagram</div>
+        </div>
+
+        <h3>3.3.2 Schema Details</h3>
+        
+        <h4>User Collection</h4>
+        <p>Supports polymorphism via Mongoose Discriminators for roles: Student, Teacher, Admin, Proctor.</p>
+        <pre>
+const UserSchema = new Schema({
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    role: { type: String, enum: ['student', 'teacher', 'admin', 'proctor'] },
+    // Role specific fields dynamically added
+});
+        </pre>
+
+        <h4>Exam Collection</h4>
+        <p>Stores configuration for exams, including proctoring rules.</p>
+        <pre>
+const ExamSchema = new Schema({
+    title: { type: String },
+    questions: [{ type: ObjectId, ref: 'Question' }],
+    duration: { type: Number },
+    proctoringConfig: {
+        enableTabLock: Boolean,
+        enableFullscreen: Boolean
+    }
+});
+        </pre>
+    </section>
+
+    <div class="page-break"></div>
+
+    <h2>3.4 UML Diagrams</h2>
+
+    <h3>3.4.1 Use Case Diagram</h3>
+    <div class="diagram-container">
+        <div class="mermaid">
+        usecaseDiagram
+            actor Student
+            actor Teacher
+            actor Admin
+            
+            package Exam_System {
+                usecase "Take Exam" as UC1
+                usecase "View Results" as UC2
+                usecase "Create Exam" as UC3
+                usecase "Manage Users" as UC4
+                usecase "Live Monitor" as UC5
+            }
+
+            Student --> UC1
+            Student --> UC2
+            Teacher --> UC3
+            Teacher --> UC2
+            Teacher --> UC5
+            Admin --> UC4
+            Admin --> UC5
+        </div>
+        <div class="diagram-caption">Figure 3.5: Use Case Diagram</div>
+    </div>
+
+    <h3>3.4.2 Sequence Diagram: Exam Submission</h3>
+    <div class="diagram-container">
+        <div class="mermaid">
+        sequenceDiagram
+            participant S as Student
+            participant FE as Frontend
+            participant BE as Backend
+            participant DB as Database
+            
+            S->>FE: Click Submit
+            FE->>BE: POST /api/submit
+            BE->>DB: Fetch Session Data
+            BE->>BE: Calculate Score
+            BE->>DB: Save Result
+            BE-->>FE: Return Score
+            FE->>S: Show Result Page
+        </div>
+        <div class="diagram-caption">Figure 3.6: Sequence Diagram</div>
+    </div>
+
+    <div class="page-break"></div>

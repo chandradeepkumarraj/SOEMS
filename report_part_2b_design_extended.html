@@ -1,0 +1,151 @@
+
+    <!-- CHAPTER 3 CONTINUED: DETAILED DESIGN -->
+    <div class="page-break"></div>
+    <section>
+        <h2>3.5 Detailed Class Diagrams</h2>
+        <p>The class diagram is the main building block of object-oriented modeling. It is used for general conceptual modeling of the systematic of the application.</p>
+
+        <h3>3.5.1 Backend Class Structure</h3>
+        <p>The backend follows a Controller-Service-Model pattern. Below are the class representations of the core backend controllers.</p>
+
+        <div class="diagram-container">
+            <div class="mermaid">
+            classDiagram
+                class AuthController {
+                    +register(req, res)
+                    +login(req, res)
+                    +logout(req, res)
+                    +forgotPassword(req, res)
+                    -generateToken(userId)
+                    -sendEmail(to, subject, body)
+                }
+
+                class ExamController {
+                    +createExam(req, res)
+                    +getExams(req, res)
+                    +getExamById(req, res)
+                    +updateExam(req, res)
+                    +deleteExam(req, res)
+                    +publishResults(req, res)
+                }
+
+                class MainController {
+                    +getDashboardStats(req, res)
+                    +getSystemHealth(req, res)
+                }
+
+                class SocketService {
+                    +init(server)
+                    +handleConnection(socket)
+                    +handleJoinRoom(roomId)
+                    +handleProctorAlert(data)
+                    +handleDisconnect()
+                    -broadcastToRoom(roomId, event, data)
+                }
+
+                AuthController ..> SocketService : uses
+                ExamController ..> AuthController : verifies
+            </div>
+            <div class="diagram-caption">Figure 3.7: Backend Controller Class Diagram</div>
+        </div>
+
+        <h3>3.5.2 Database Model Classes</h3>
+        <p>Representation of Mongoose Schemas as classes.</p>
+
+        <div class="diagram-container">
+            <div class="mermaid">
+            classDiagram
+                class User {
+                    +String _id
+                    +String name
+                    +String email
+                    +String password
+                    +String role
+                    +matchPassword(password)
+                }
+
+                class Exam {
+                    +String _id
+                    +String title
+                    +String description
+                    +Number duration
+                    +Date startTime
+                    +Array questions
+                    +Object proctoringConfig
+                }
+
+                class Question {
+                    +String _id
+                    +String text
+                    +Array options
+                    +Number correctOption
+                    +String difficulty
+                    +String subject
+                }
+
+                User "1" --> "*" Exam : creates
+                Exam "1" *-- "*" Question : contains
+            </div>
+            <div class="diagram-caption">Figure 3.8: Database Model Class Diagram</div>
+        </div>
+    </section>
+
+    <div class="page-break"></div>
+
+    <section>
+        <h2>3.6 Activity Diagrams</h2>
+        <p>Activity diagrams represent the workflows of stepwise activities.</p>
+
+        <h3>3.6.1 Teacher: Create and Publish Exam</h3>
+        <div class="diagram-container">
+            <div class="mermaid">
+            stateDiagram-v2
+                [*] --> TeacherLogin
+                TeacherLogin --> Dashboard
+                Dashboard --> CreateExamBtn
+                CreateExamBtn --> EnterDetails
+                EnterDetails --> SelectQuestions
+                SelectQuestions --> ConfigureProctoring
+                ConfigureProctoring --> Review
+                Review --> SaveDraft
+                Review --> Publish
+                SaveDraft --> [*]
+                Publish --> NotifyStudents
+                NotifyStudents --> [*]
+            </div>
+            <div class="diagram-caption">Figure 3.9: Exam Creation Activity Flow</div>
+        </div>
+
+        <h3>3.6.2 Student: Attempt Exam</h3>
+        <div class="diagram-container">
+            <div class="mermaid">
+            stateDiagram-v2
+                [*] --> StudentLogin
+                StudentLogin --> ViewExams
+                ViewExams --> StartExam
+                StartExam --> CheckRequirements
+                
+                state CheckRequirements {
+                    [*] --> CheckCamera
+                    CheckCamera --> CheckFullscreen
+                    CheckFullscreen --> [*]
+                }
+                
+                CheckRequirements --> ExamInterface
+                ExamInterface --> AnswerQuestions
+                
+                state Monitoring {
+                    [*] --> DetectTabSwitch
+                    DetectTabSwitch --> LogViolation
+                    LogViolation --> CheckThreshold
+                    CheckThreshold --> AutoSubmit : if > 3
+                    CheckThreshold --> Continue : if <= 3
+                }
+                
+                AnswerQuestions --> Submit
+                Submit --> ViewResult
+                ViewResult --> [*]
+            </div>
+            <div class="diagram-caption">Figure 3.10: Student Exam Attempt Activity Flow</div>
+        </div>
+    </section>

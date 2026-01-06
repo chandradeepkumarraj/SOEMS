@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOEMS Project Report</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman:ital,wght@0,400;0,700;1,400&display=swap');
+        
+        :root {
+            --primary-color: #000;
+        }
+
+        body {
+            font-family: 'Times New Roman', serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            color: #000;
+            background-color: #fff;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 20mm;
+            margin: 10mm auto;
+            border: 1px solid #d3d3d3;
+            border-radius: 5px;
+            background: white;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            .page {
+                width: 100%;
+                margin: 0;
+                border: initial;
+                border-radius: initial;
+                width: initial;
+                min-height: initial;
+                box-shadow: initial;
+                background: initial;
+                page-break-after: always;
+            }
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
+
+        h1 { font-size: 24pt; text-align: center; }
+        h2 { font-size: 18pt; border-bottom: 2px solid #000; padding-bottom: 5px; }
+        h3 { font-size: 14pt; }
+        p { font-size: 12pt; text-align: justify; margin-bottom: 1em; }
+        li { font-size: 12pt; margin-bottom: 0.5em; }
+
+        .center { text-align: center; }
+        .bold { font-weight: bold; }
+        .uppercase { text-transform: uppercase; }
+
+        .cover-page {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 250mm; /* Adjust for padding */
+            text-align: center;
+        }
+
+        .cover-page h1 { margin-bottom: 0.2em; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        th, td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+            font-size: 12pt;
+        }
+        
+        th { background-color: #f2f2f2; }
+
+        .diagram-container {
+            margin: 20px 0;
+            text-align: center;
+            page-break-inside: avoid;
+        }
+        
+        .diagram-caption {
+            font-style: italic;
+            margin-top: 10px;
+            font-size: 11pt;
+        }
+
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border: 1px solid #ddd;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 10pt;
+            text-align: left;
+        }
+
+        /* Mermaid sizing */
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- COVER PAGE -->
+    <div class="page">
+        <div class="cover-page">
+            <div>
+                <p class="uppercase bold" style="font-size: 16pt;">A PROJECT REPORT ON</p>
+                <h1 style="color: #2c3e50;">SERVERLESS ONLINE EXAMINATION MANAGEMENT SYSTEM (SOEMS)</h1>
+                <p class="uppercase bold" style="margin-top: 20px;">Submitted in partial fulfillment of the requirements for the award of the degree of</p>
+                <h2 style="border: none;">BACHELOR OF TECHNOLOGY</h2>
+                <p class="uppercase bold">IN</p>
+                <p class="uppercase bold">COMPUTER SCIENCE AND ENGINEERING</p>
+            </div>
+
+            <div>
+                <p class="bold">SUBMITTED BY</p>
+                <p class="uppercase">CHANDRADEEP KUMAR RAJ</p>
+                <p>(ROLL NO: XXXXXXXXXX)</p>
+            </div>
+
+            <div>
+                <p class="bold">UNDER THE GUIDANCE OF</p>
+                <p class="uppercase">PROF. GUIDE NAME</p>
+                <p>DESIGNATION</p>
+            </div>
+
+            <div>
+                <!-- Placeholder for Logo -->
+                <div style="width: 100px; height: 100px; border: 2px solid #000; border-radius: 50%; display: inline-block; line-height: 100px;">LOGO</div>
+                <h3 style="margin-top: 10px; font-weight: bold;">DEPARTMENT OF COMPUTER SCIENCE AND ENGINEERING</h3>
+                <p class="uppercase bold">INSTITUTE NAME</p>
+                <p class="uppercase bold">YYYY-YYYY</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CERTIFICATE -->
+    <div class="page">
+        <h1 style="text-decoration: underline;">CERTIFICATE</h1>
+        <br><br>
+        <p>This is to certify that the project report entitled <span class="bold">"SERVERLESS ONLINE EXAMINATION MANAGEMENT SYSTEM (SOEMS)"</span> submitted by <span class="bold">CHANDRADEEP KUMAR RAJ</span> in partial fulfillment of the requirements for the award of the degree of <span class="bold">Bachelor of Technology</span> in <span class="bold">Computer Science and Engineering</span> is a bona fide record of the work carried out by him under my supervision and guidance.</p>
+        <br><br><br><br>
+        <div style="display: flex; justify-content: space-between;">
+            <div class="center">
+                <p class="bold">Internal Guide</p>
+                <p>Prof. Name</p>
+            </div>
+            <div class="center">
+                <p class="bold">Head of Department</p>
+                <p>Prof. HOD Name</p>
+            </div>
+        </div>
+        <br><br><br>
+        <div class="center">
+            <p class="bold">External Examiner</p>
+        </div>
+    </div>
+
+    <!-- ABSTRACT -->
+    <div class="page">
+        <h1>ABSTRACT</h1>
+        <p>The <strong>Serverless Online Examination Management System (SOEMS)</strong> is a cutting-edge web application developed to revolutionize the traditional examination process. As educational institutions increasingly shift towards digital solutions, the need for a secure, scalable, and efficient platform for conducting remote assessments has become paramount. SOEMS addresses this need by leveraging the power of the <strong>MERN stacks (MongoDB, Express.js, React, Node.js)</strong> combined with modern technologies like <strong>TypeScript</strong> and <strong>Socket.io</strong>.</p>
+        <p>The primary capability of SOEMS is its robust proctoring system. Unlike basic form-based exams, SOEMS implements real-time monitoring features. It utilizes the browser's Visibility API to detect tab switching, Fullscreen API to ensure an immersive environment, and webcam integration (simulated logic layers) for identity verification. These features are synchronized in real-time between the student and the proctor using WebSockets, ensuring immediate intervention in case of malpractice.</p>
+        <p>Furthermore, the system introduces a comprehensive "Teacher Dashboard" equipped with advanced analytics. Teachers can not only create complex exams using a rich question bank but also view detailed statistical breakdowns of student performance, including score distribution histograms and question difficulty indices. For administrators, features like bulk user import via CSV and granular role management streamline the operational aspect of conducting large-scale exams.</p>
+        <p>This report details the end-to-end development of SOEMS, covering the system architecture, detailed database design, security implementations such as JWT authentication and strict input validation using Zod, and the testing methodologies employed to ensure a bug-free experience.</p>
+    </div>
+
+    <!-- TABLE OF CONTENTS -->
+    <div class="page">
+        <h1>TABLE OF CONTENTS</h1>
+        <ul>
+            <li><strong>Chapter 1: INTRODUCTION</strong>
+                <ul>
+                    <li>1.1 Project Overview</li>
+                    <li>1.2 Problem Statement</li>
+                    <li>1.3 Project Capabilities & Objectives</li>
+                    <li>1.4 Scope of the Application</li>
+                </ul>
+            </li>
+            <li><strong>Chapter 2: SYSTEM ANALYSIS</strong>
+                <ul>
+                    <li>2.1 Existing System Limitations</li>
+                    <li>2.2 Proposed System Advantages</li>
+                    <li>2.3 Feasibility Analysis</li>
+                    <li>2.4 Hardware & Software Requirements</li>
+                </ul>
+            </li>
+            <li><strong>Chapter 3: SYSTEM REQUIREMENTS SPECIFICATION</strong>
+                <ul>
+                    <li>3.1 Functional Requirements</li>
+                    <li>3.2 Non-Functional Requirements</li>
+                </ul>
+            </li>
+            <li><strong>Chapter 4: SYSTEM DESIGN</strong>
+                <ul>
+                    <li>4.1 System Architecture</li>
+                    <li>4.2 Use Case Diagrams</li>
+                    <li>4.3 Data Flow Diagrams (DFD)</li>
+                    <li>4.4 Sequence Diagrams</li>
+                    <li>4.5 Database Design (ER Diagram)</li>
+                </ul>
+            </li>
+            <li><strong>Chapter 5: IMPLEMENTATION DETAILS</strong>
+                <ul>
+                    <li>5.1 Project Directory Structure</li>
+                    <li>5.2 Backend Core Logic</li>
+                    <li>5.3 Frontend Component Logic</li>
+                    <li>5.4 Real-time Communication (Socket.io)</li>
+                </ul>
+            </li>
+            <li><strong>Chapter 6: TESTING</strong>
+                <ul>
+                    <li>6.1 Testing Methodology</li>
+                    <li>6.2 Test Cases</li>
+                </ul>
+            </li>
+            <li><strong>Chapter 7: CONCLUSION & FUTURE SCOPE</strong></li>
+        </ul>
+    </div>
+
+    <!-- CHAPTER 1 -->
+    <div class="page">
+        <h2>CHAPTER 1: INTRODUCTION</h2>
+        
+        <h3>1.1 Project Overview</h3>
+        <p>Access to education and valid assessment is a fundamental right. However, conducting physical examinations poses significant logistical, financial, and security challenges. The <strong>Serverless Online Examination Management System (SOEMS)</strong> allows institutions to administer objective assessments to students regardless of their physical location. It is a fully responsive, single-page application (SPA) that provides a seamless user experience across devices.</p>
+
+        <h3>1.2 Problem Statement</h3>
+        <p>Traditional examination systems are fraught with inefficiencies:</p>
+        <ul>
+            <li><strong>Logistical Burden:</strong> Printing papers, arranging exam halls, and hiring invigilators consumes vast resources.</li>
+            <li><strong>Delayed Feedback:</strong> Manual evaluation leads to delays in result declaration, hindering the learning feedback loop.</li>
+            <li><strong>Security Vulnerabilities:</strong> Physical papers are prone to leaks. Basic online forms lack proctoring, enabling easy cheating.</li>
+            <li><strong>Data Silos:</strong> Student performance data often sits in piles of paper, inaccessible for meaningful long-term analysis.</li>
+        </ul>
+
+        <h3>1.3 Capabilities & Objectives</h3>
+        <p>SOEMS aims to solve these issues with the following capabilities:</p>
+        <ul>
+            <li><strong>Secure Exam Delivery:</strong> Enforcing full-screen mode and disabling clipboard events to prevent copy-pasting.</li>
+            <li><strong>Instant Evaluation:</strong> Automated grading algorithms provide scores immediately upon submission.</li>
+            <li><strong>Live Proctoring:</strong> A dedicated dashboard for proctors to monitor active sessions and receive real-time alerts for violations (e.g., "Student X switched tabs").</li>
+            <li><strong>Scalable Architecture:</strong> Built on Node.js asynchronous architecture to handle high concurrency.</li>
+        </ul>
+    </div>
+
+    <!-- CHAPTER 2 -->
+    <div class="page">
+        <h2>CHAPTER 2: SYSTEM ANALYSIS</h2>
+
+        <h3>2.1 Existing System Limitations</h3>
+        <p>Many institutions currently use systems like Google Forms or Moodle Quizzes for basic assessments. While functional, they lack specialized exam-centric features:</p>
+        <ul>
+            <li>No real-time monitoring of user activity.</li>
+            <li>Limited analytical insights (often just specific scores).</li>
+            <li>Lack of organizational hierarchy (Groups/Subgroups for classes).</li>
+        </ul>
+
+        <h3>2.2 Proposed System Advantages</h3>
+        <p>SOEMS introduces a custom-built engine tailored for high-stakes exams. The "Proctor" role is unique to this system, allowing human-in-the-loop monitoring aided by automated algorithmic alerts. The breakdown of users into Groups and Subgroups mirrors real-world institutional structures (Departments -> Classes).</p>
+
+        <h3>2.3 Feasibility Analysis</h3>
+        <p><strong>Technical Feasibility:</strong> The MERN stack is open-source and widely supported. Hosting can be done on any standard Linux server or container orchestration platform (Docker/K8s).</p>
+        <p><strong>Operational Feasibility:</strong> The UI is built with React and Tailwind CSS, focusing on intuitive design principles (Material/Flat design), requiring minimal training for users.</p>
+
+        <h3>2.4 Hardware & Software Requirements</h3>
+        <table>
+            <tr>
+                <th>Component</th>
+                <th>Requirement</th>
+            </tr>
+            <tr>
+                <td>Server OS</td>
+                <td>Linux (Ubuntu 20.04+) or Windows Server</td>
+            </tr>
+            <tr>
+                <td>Client OS</td>
+                <td>Windows, macOS, Linux, Android, iOS</td>
+            </tr>
+            <tr>
+                <td>Runtime</td>
+                <td>Node.js v18+</td>
+            </tr>
+            <tr>
+                <td>Database</td>
+                <td>MongoDB v6.0+</td>
+            </tr>
+            <tr>
+                <td>Browser</td>
+                <td>Chrome/Edge/Firefox (Latest Versions)</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- CHAPTER 4: SYSTEM DESIGN -->
+    <div class="page">
+        <h2>CHAPTER 4: SYSTEM DESIGN</h2>
+
+        <h3>4.1 System Architecture</h3>
+        <p>The system follows a Three-Tier Architecture, separating presentation, application logic, and data storage.</p>
+        <div class="diagram-container">
+            <div class="mermaid">
+            graph TB
+                subgraph "Frontend Layer (React)"
+                    UI[User Interface]
+                    Auth[Auth Guard]
+                    SocketClient[Socket.io Client]
+                end
+                
+                subgraph "API Layer (Express/Node)"
+                    Router[API Router]
+                    Controller[Controllers]
+                    Service[Business Logic]
+                    SocketServer[Socket.io Server]
+                end
+                
+                subgraph "Data Layer (MongoDB)"
+                    Users[(User Collection)]
+                    Exams[(Exam Collection)]
+                    Results[(Results Collection)]
+                end
+                
+                UI --> Auth
+                Auth --> Router
+                Router --> Controller
+                Controller --> Service
+                Service --> Users
+                Service --> Exams
+                Service --> Results
+                SocketClient <--> SocketServer
+            </div>
+            <p class="diagram-caption">Fig 4.1: High-Level System Architecture</p>
+        </div>
+
+        <h3>4.2 Use Case Diagram</h3>
+        <p>The system defines four primary actors: Admin, Teacher, Student, and Proctor.</p>
+        <div class="diagram-container">
+            <div class="mermaid">
+            usecaseDiagram
+                actor Student
+                actor Teacher
+                actor Admin
+                actor Proctor
+
+                usecase "Take Exam" as UC1
+                usecase "View Results" as UC2
+                usecase "Create Exam" as UC3
+                usecase "Manage Questions" as UC4
+                usecase "Manage Users" as UC5
+                usecase "Monitor Exam" as UC6
+                usecase "Flag Violation" as UC7
+
+                Student --> UC1
+                Student --> UC2
+                Teacher --> UC3
+                Teacher --> UC4
+                Teacher --> UC2
+                Admin --> UC5
+                Admin --> UC6
+                Proctor --> UC6
+                Proctor --> UC7
+            </div>
+            <p class="diagram-caption">Fig 4.2: Use Case Diagram</p>
+        </div>
+
+        <h3>4.3 Sequence Diagrams</h3>
+        <h4>4.3.1 Exam Submission Flow</h4>
+        <div class="diagram-container">
+            <div class="mermaid">
+            sequenceDiagram
+                participant S as Student
+                participant UI as Frontend
+                participant API as Backend
+                participant DB as Database
+                participant SOC as SocketServer
+
+                S->>UI: Clicks Submit
+                UI->>API: POST /api/exams/:id/submit
+                API->>DB: Fetch Answers Key
+                DB-->>API: Returns Correct Answers
+                API->>API: Calculate Score
+                API->>DB: Save Result
+                API->>SOC: Emit 'exam_submitted'
+                SOC-->>S: Confirmation
+                API-->>UI: Return Score & Feedback
+                UI-->>S: Display Result Card
+            </div>
+            <p class="diagram-caption">Fig 4.3: Sequence Diagram for Exam Submission</p>
+        </div>
+
+        <h3>4.5 Database Design (ER Diagram)</h3>
+        <div class="diagram-container">
+            <div class="mermaid">
+            erDiagram
+                USER ||--o{ EXAM : creates
+                USER ||--o{ RESULT : owns
+                EXAM ||--|{ QUESTION : contains
+                EXAM ||--o{ RESULT : generates
+                EXAM ||--o{ EXAM_SESSION : tracks
+                USER ||--o{ VIOLATION : commits
+                
+                USER {
+                    ObjectId _id PK
+                    string name
+                    string email
+                    string role
+                    string password
+                }
+                
+                EXAM {
+                    ObjectId _id PK
+                    string title
+                    int duration
+                    datetime startTime
+                    array questions
+                }
+                
+                RESULT {
+                    ObjectId _id PK
+                    ObjectId studentId FK
+                    ObjectId examId FK
+                    int score
+                    array answers
+                }
+
+                VIOLATION {
+                    ObjectId _id PK
+                    string type
+                    datetime timestamp
+                }
+            </div>
+            <p class="diagram-caption">Fig 4.4: Entity Relationship Diagram</p>
+        </div>
+    </div>
+
+    <!-- CHAPTER 5: IMPLEMENTATION -->
+    <div class="page">
+        <h2>CHAPTER 5: IMPLEMENTATION DETAILS</h2>
+        
+        <h3>5.1 Core Folder Structure</h3>
+        <p>The project is structured as a monorepo containing both Backend and Frontend.</p>
+        <pre>
+/SOEMS
+├── backend/
+│   ├── src/
+│   │   ├── config/ (DB Connection)
+│   │   ├── controllers/ (Req/Res Logic)
+│   │   ├── models/ (Mongoose Schemas)
+│   │   ├── routes/ (Express Routes)
+│   │   ├── server.ts (Entry Point)
+│   │   └── socket.ts (Real-time Logic)
+│   ├── package.json
+│   └── tsconfig.json
+├── frontend/
+│   ├── src/
+│       ├── components/ (Reusable UI)
+│       ├── pages/ (Route Views)
+│       ├── context/ (Global State)
+│       ├── App.tsx
+│       └── main.tsx
+│   ├── package.json
+│   └── vite.config.ts
+        </pre>
+
+        <h3>5.2 Backend Logic Highlight</h3>
+        <p><strong>Proctoring Socket Logic:</strong> This snippet demonstrates how the server handles proctor alerts via Socket.io.</p>
+        <pre><code class="language-typescript">
+// backend/src/socket.ts
+io.on('connection', (socket: Socket) => {
+    
+    // Student joins exam room
+    socket.on('join-room', (roomId: string) => {
+        socket.join(roomId);
+    });
+
+    // Handle Proctor Alert (Tab switching, etc.)
+    socket.on('proctor-alert', (data) => {
+        console.log(`[ALERT] Student ${data.studentName}: ${data.type}`);
+        // Broadcast to proctor/admin monitoring this exam
+        io.to(data.examId).emit('monitor-proctor-alert', data);
+        
+        // Also log to global monitoring room
+        io.to('global-proctor-room').emit('monitor-proctor-alert', data);
+    });
+});
+        </code></pre>
+    </div>
+
+    <!-- CHAPTER 6: TESTING -->
+    <div class="page">
+        <h2>CHAPTER 6: TESTING</h2>
+        
+        <h3>6.1 Test Cases</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 10%;">ID</th>
+                    <th style="width: 40%;">Description</th>
+                    <th style="width: 30%;">Expected Outcome</th>
+                    <th style="width: 20%;">Result</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>TC-001</td>
+                    <td>Verify User Registration with existing email</td>
+                    <td>Show "Email already exists" error</td>
+                    <td><span style="color: green; font-weight: bold;">PASS</span></td>
+                </tr>
+                <tr>
+                    <td>TC-002</td>
+                    <td>Student attempts to access Teacher Dashboard</td>
+                    <td>Redirect to 403 Forbidden / Home</td>
+                    <td><span style="color: green; font-weight: bold;">PASS</span></td>
+                </tr>
+                <tr>
+                    <td>TC-003</td>
+                    <td>Exam auto-submit on timer expiry</td>
+                    <td>Exam submits automatically, Result page shown</td>
+                    <td><span style="color: green; font-weight: bold;">PASS</span></td>
+                </tr>
+                <tr>
+                    <td>TC-004</td>
+                    <td>Proctor receives alert when student switches tab</td>
+                    <td>Toast notification appears on Proctor Dashboard</td>
+                    <td><span style="color: green; font-weight: bold;">PASS</span></td>
+                </tr>
+                <tr>
+                    <td>TC-005</td>
+                    <td>Bulk CSV Import of 500 users</td>
+                    <td>All users created, Report generated</td>
+                    <td><span style="color: green; font-weight: bold;">PASS</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- CHAPTER 7: CONCLUSION -->
+    <div class="page">
+        <h2>CHAPTER 7: CONCLUSION & FUTURE SCOPE</h2>
+        
+        <h3>7.1 Conclusion</h3>
+        <p>The <strong>Serverless Online Examination Management System</strong> has been successfully designed and implemented. It addresses the critical need for secure, scalable online assessments. By integrating advanced web capabilities like Fullscreen enforcement and WebSocket-based monitoring, SOEMS bridges the gap between physical supervision and remote convenience.</p>
+        
+        <h3>7.2 Future Scope</h3>
+        <ul>
+            <li><strong>AI Integration:</strong> Using TensorFlow.js for client-side face detection to automate identity verification without human proctors.</li>
+            <li><strong>Offline Capability:</strong> Implementing PWA (Progressive Web App) service workers to allow exam continuation during minor internet outages.</li>
+            <li><strong>Mobile App:</strong> Developing a React Native application for a native mobile experience.</li>
+        </ul>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+    </script>
+</body>
+</html>

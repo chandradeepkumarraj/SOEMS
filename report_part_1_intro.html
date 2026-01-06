@@ -1,0 +1,173 @@
+
+    <!-- Title Page -->
+    <div class="title-page">
+        <div class="university-logo">
+            <!-- Placeholder for Logo -->
+            <span style="font-size: 2em; color: #ccc;">LOGO</span>
+        </div>
+        <h1 class="project-title">SOEMS<br><span style="font-size: 0.5em; color: black;">(Serverless Online Examination Management System)</span></h1>
+        
+        <div class="submission-text">
+            <p>A Project Report Submitted to</p>
+            <h3>[DEPARTMENT NAME]</h3>
+            <p>In partial fulfillment of the requirements for the degree of</p>
+            <h3>BACHELOR OF TECHNOLOGY</h3>
+            <p>IN</p>
+            <h3>COMPUTER SCIENCE & ENGINEERING</h3>
+        </div>
+
+        <div style="margin-top: 3rem; width: 100%; display: flex; justify-content: space-around;">
+            <div style="text-align: left;">
+                <p><strong>Submitted By:</strong></p>
+                <p>[Your Name]<br>Reg No: [Your Roll No]</p>
+            </div>
+            <div style="text-align: right;">
+                <p><strong>Under the Guidance of:</strong></p>
+                <p>[Guide Name]<br>[Designation]</p>
+            </div>
+        </div>
+        <p style="margin-top: auto;"><strong>[Academic Year 2025-2026]</strong></p>
+    </div>
+
+    <!-- Certificate -->
+    <div class="title-page">
+        <div class="cert-border">
+            <h1>CERTIFICATE</h1>
+            <p>This is to certify that the project report entitled <strong>"SOEMS - Serverless Online Examination Management System"</strong> submitted by <strong>[Your Name]</strong> (Reg No: [Roll No]) in partial fulfillment of the requirements for the award of the degree of <strong>Bachelor of Technology in Computer Science & Engineering</strong> is a bona fide record of the work carried out under my supervision and guidance.</p>
+            
+            <div style="margin-top: 4rem; display: flex; justify-content: space-between;">
+                <div style="text-align: center;">
+                    <br><strong>[Name]</strong><br>Project Guide
+                </div>
+                <div style="text-align: center;">
+                    <br><strong>[Name]</strong><br>Head of Department
+                </div>
+            </div>
+            
+            <div style="margin-top: 4rem; text-align: center;">
+                <strong>External Examiner</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Acknowledgement -->
+    <section>
+        <h1 style="text-align: center;">ACKNOWLEDGEMENT</h1>
+        <p>I would like to express my deep sense of gratitude to my project guide <strong>[Guide Name]</strong> for their valuable guidance and constant encouragement during the course of this project.</p>
+        <p>I thank the <strong>Head of Department</strong> for providing the necessary facilities to complete this project.</p>
+        <p>I am also grateful to the <strong>Principal</strong> and the <strong>Management</strong> for the academic environment they have provided.</p>
+        <p>Finally, I thank my parents and friends for their moral support.</p>
+        <br>
+        <p style="text-align: right;"><strong>[Your Name]</strong></p>
+    </section>
+
+    <div class="page-break"></div>
+
+    <!-- Abstract -->
+    <section>
+        <h1 style="text-align: center;">ABSTRACT</h1>
+        <p>In the digital age, educational institutions are increasingly moving towards online assessment methods. However, maintaining the integrity of examinations in a remote environment remains a significant challenge. This project, <strong>SOEMS (Serverless Online Examination Management System)</strong>, addresses this challenge by providing a comprehensive, secure, and scalable platform for conducting online exams.</p>
+        <p>SOEMS is built using the <strong>MERN Stack (MongoDB, Express.js, React, Node.js)</strong> and features a robust <strong>Role-Based Access Control (RBAC)</strong> system catering to Students, Teachers, Administrators, and Proctors. Key features include a secure exam interface with full-screen enforcement, tab-lock mechanisms, and real-time proctoring using <strong>Socket.io</strong> and webcam integration.</p>
+        <p>The system allows teachers to create exams with diverse question types, manage question banks, and analyze student performance through detailed analytics. Administrators have full control over user management and system monitoring. The "Serverless" aspect (in concept or future deployment) ensures high scalability and cost-efficiency. This report details the system's design, implementation, and rigorous testing, demonstrating its effectiveness as a modern solution for academic assessments.</p>
+    </section>
+
+    <div class="page-break"></div>
+
+    <!-- Table of Contents -->
+    <section>
+        <h1 style="text-align: center;">TABLE OF CONTENTS</h1>
+        <div class="toc-entry"><span>1. INTRODUCTION</span> <span>1</span></div>
+        <div class="toc-entry"><span style="margin-left: 20px;">1.1 Overview</span> <span>1</span></div>
+        <div class="toc-entry"><span style="margin-left: 20px;">1.2 Problem Statement</span> <span>2</span></div>
+        <div class="toc-entry"><span style="margin-left: 20px;">1.3 Objectives</span> <span>3</span></div>
+        <div class="toc-entry"><span style="margin-left: 20px;">1.4 Scope of the Project</span> <span>4</span></div>
+        <div class="toc-entry"><span>2. SYSTEM ANALYSIS</span> <span>5</span></div>
+        <div class="toc-entry"><span style="margin-left: 20px;">2.1 Existing System</span> <span>5</span></div>
+        <div class="toc-entry"><span style="margin-left: 20px;">2.2 Proposed System</span> <span>6</span></div>
+        <div class="toc-entry"><span style="margin-left: 20px;">2.3 Feasibility Study</span> <span>7</span></div>
+        <div class="toc-entry"><span>3. SYSTEM DESIGN</span> <span>9</span></div>
+        <div class="toc-entry"><span style="margin-left: 20px;">3.1 System Architecture</span> <span>9</span></div>
+        <div class="toc-entry"><span style="margin-left: 20px;">3.2 Data Flow Diagrams</span> <span>12</span></div>
+        <div class="toc-entry"><span style="margin-left: 20px;">3.3 Database Design</span> <span>15</span></div>
+        <div class="toc-entry"><span>4. IMPLEMENTATION</span> <span>20</span></div>
+        <div class="toc-entry"><span>5. TESTING & RESULTS</span> <span>35</span></div>
+        <div class="toc-entry"><span>6. CONCLUSION</span> <span>45</span></div>
+    </section>
+
+    <div class="page-break"></div>
+
+    <!-- CHAPTER 1 -->
+    <section>
+        <h1>CHAPTER 1: INTRODUCTION</h1>
+        
+        <h2>1.1 Overview</h2>
+        <p>The education sector has witnessed a paradigm shift towards digitalization, especially in assessment methodologies. Traditional pen-and-paper examinations, while effective, are resource-intensive, requiring physical infrastructure, paper logistics, and manual evaluation. <strong>SOEMS (Serverless Online Examination Management System)</strong> is designed to bridge this gap by offering a streamlined, digital alternative.</p>
+        <p>This project leverages modern web technologies to create a seamless experience for all stakeholders. It is a single-page application (SPA) ensuring high responsiveness and a native-app-like feel. The backend is built on a microservices-ready architecture, capable of handling high concurrency during exam peaks.</p>
+
+        <h2>1.2 Problem Statement</h2>
+        <p>Current online examination systems often suffer from several limitations:</p>
+        <ul>
+            <li><strong>Lack of Proctoring integrity:</strong> Many systems fail to prevent cheating effectively in remote settings.</li>
+            <li><strong>Scalability Issues:</strong> Systems crash under high load when hundreds of students start an exam simultaneously.</li>
+            <li><strong>Poor User Experience:</strong> Clunky interfaces lead to student anxiety and errors.</li>
+            <li><strong>Limited Analytics:</strong> Teachers lack deep insights into student performance beyond just scores.</li>
+        </ul>
+        <p>SOEMS aims to resolve these issues by integrating real-time monitoring, a scalable Node.js backend, and a user-centric React frontend.</p>
+
+        <h2>1.3 Objectives</h2>
+        <ul>
+            <li>To develop a secure platform for conducting online examinations.</li>
+            <li>To implement real-time proctoring features (tab switching detection, fullscreen enforcement).</li>
+            <li>To provide instant results and detailed performance analytics.</li>
+            <li>To facilitate efficient management of students, teachers, and question banks.</li>
+        </ul>
+
+        <h2>1.4 Scope of the Project</h2>
+        <p>The scope of SOEMS covers the entire lifecycle of an examination:</p>
+        <ol>
+            <li><strong>Pre-Exam:</strong> User registration, question bank creation, exam scheduling.</li>
+            <li><strong>During Exam:</strong> Secure delivery of questions, live answer saving, real-time monitoring by proctors.</li>
+            <li><strong>Post-Exam:</strong> Auto-evaluation, result generation, report exporting, and historical analysis.</li>
+        </ol>
+        <p>The system is designed for use by schools, colleges, and corporate training centers.</p>
+    </section>
+
+    <div class="page-break"></div>
+
+    <!-- CHAPTER 2 -->
+    <section>
+        <h1>CHAPTER 2: SYSTEM ANALYSIS</h1>
+
+        <h2>2.1 Existing System Analysis</h2>
+        <p>In traditional or older digital systems, the workflow is often fragmented. Exams are created in one system, delivered via another (often just Google Forms), and proctored via a separate video call tool (like Zoom). This disjointed experience leads to data silos and security vulnerabilities.</p>
+        <p><strong>Disadvantages of Existing System:</strong></p>
+        <ul>
+            <li>Manual verification of student identity is difficult.</li>
+            <li>No automated mechanism to detect screen switching.</li>
+            <li>Result processing is delayed and prone to manual errors.</li>
+        </ul>
+
+        <h2>2.2 Proposed System</h2>
+        <p>The proposed SOEMS integrates all functionalities into a cohesive platform. It utilizes <strong>Socket.io</strong> for real-time bidirectional communication, essential for live proctoring alerts. The database design uses MongoDB's flexible document structure to handle diverse question types and complex result nested structures.</p>
+        <p><strong>Advantages of Proposed System:</strong></p>
+        <ul>
+            <li><strong>Centralized Dashboard:</strong> Single point of access for all tasks.</li>
+            <li><strong>Automated Integrity:</strong> Algorithms detect suspicious behavior automatically.</li>
+            <li><strong>Scalability:</strong> Built on Node.js non-blocking I/O model.</li>
+        </ul>
+
+        <h2>2.3 Feasibility Study</h2>
+        
+        <h3>2.3.1 Technical Feasibility</h3>
+        <p>The project uses the MERN stack. React and Node.js are open-source, widely supported, and run efficiently on standard cloud infrastructure. MongoDB handles the data volume effectively. Hence, the project is technically feasible.</p>
+
+        <h3>2.3.2 Operational Feasibility</h3>
+        <p>The user interface is designed with a focus on UX (User Experience). Minimal training is required for teachers and administrators. Students familiar with basic web browsing can navigate the exam interface easily.</p>
+
+        <h3>2.3.3 Economic Feasibility</h3>
+        <p>Being built on open-source technologies, the licensing cost is zero. The primary cost involves hosting, which is minimized by the efficient architecture. The ROI is high due to savings on physical exam logistics.</p>
+    </section>
+
+    <div class="page-break"></div>

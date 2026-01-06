@@ -1,0 +1,139 @@
+
+    <!-- CHAPTER 5 CONTINUED: EXTENDED TESTING -->
+    <div class="page-break"></div>
+    <section>
+        <h2>5.4 Comprehensive Test Suite</h2>
+        <p>This section details the extensive testing performed on the system.</p>
+
+        <h3>5.4.1 Validation Testing</h3>
+        <table>
+            <tr>
+                <th>Test Case</th>
+                <th>Input Data</th>
+                <th>Expected Outcome</th>
+                <th>Status</th>
+            </tr>
+            <tr>
+                <td>Email Format</td>
+                <td>user@domain</td>
+                <td>Accept invalid domain format</td>
+                <td>PASS</td>
+            </tr>
+            <tr>
+                <td>Password Strength</td>
+                <td>12345</td>
+                <td>Reject (Min 8 chars required)</td>
+                <td>PASS</td>
+            </tr>
+            <tr>
+                <td>Empty Fields</td>
+                <td>Submit blank form</td>
+                <td>Show "Required" errors</td>
+                <td>PASS</td>
+            </tr>
+            <tr>
+                <td>Duplicate Email</td>
+                <td>Register existing email</td>
+                <td>Show "User already exists"</td>
+                <td>PASS</td>
+            </tr>
+        </table>
+
+        <h3>5.4.2 Integration Testing</h3>
+        <table>
+            <tr>
+                <th>Module Interaction</th>
+                <th>Scenario</th>
+                <th>Expected Outcome</th>
+                <th>Status</th>
+            </tr>
+            <tr>
+                <td>Auth -> Dashboard</td>
+                <td>Login redirects to role-specific dashboard</td>
+                <td>Student -> StudentDash, Admin -> AdminDash</td>
+                <td>PASS</td>
+            </tr>
+            <tr>
+                <td>Exam -> Database</td>
+                <td>Save Exam Draft</td>
+                <td>Exam ID returned, stored in DB</td>
+                <td>PASS</td>
+            </tr>
+            <tr>
+                <td>Frontend -> Socket</td>
+                <td>User joins exam room</td>
+                <td>Server acknowledges room join</td>
+                <td>PASS</td>
+            </tr>
+        </table>
+
+        <h3>5.4.3 Performance Testing</h3>
+        <table>
+            <tr>
+                <th>Metric</th>
+                <th>Target</th>
+                <th>Actual</th>
+                <th>Result</th>
+            </tr>
+            <tr>
+                <td>Login Response</td>
+                <td>&lt; 500ms</td>
+                <td>~200ms</td>
+                <td>Exceeds</td>
+            </tr>
+            <tr>
+                <td>Exam Load Time</td>
+                <td>&lt; 2s</td>
+                <td>~1.2s</td>
+                <td>Exceeds</td>
+            </tr>
+            <tr>
+                <td>Socket Latency</td>
+                <td>&lt; 100ms</td>
+                <td>~45ms</td>
+                <td>Exceeds</td>
+            </tr>
+        </table>
+    </section>
+
+    <!-- USER MANUAL -->
+    <div class="page-break"></div>
+    <section>
+        <h1>APPENDIX A: USER MANUAL</h1>
+        
+        <h2>A.1 Student Guide</h2>
+        <ol>
+            <li><strong>Login:</strong> Enter your registered email and password.</li>
+            <li><strong>Dashboard:</strong> View "Upcoming Exams" list.</li>
+            <li><strong>Start Exam:</strong> Click "Start" at the scheduled time. Ensure Camera permission is granted.</li>
+            <li><strong>Interface:</strong>
+                <ul>
+                    <li>Use "Next/Prev" to navigate questions.</li>
+                    <li>The Palette on the right shows answered/unanswered status.</li>
+                    <li><strong>Do not switch tabs</strong> or exit fullscreen, it will capture a violation.</li>
+                </ul>
+            </li>
+            <li><strong>Submit:</strong> Click "Submit Exam" to finish. Result will be displayed immediately.</li>
+        </ol>
+
+        <h2>A.2 Teacher Guide</h2>
+        <ol>
+            <li><strong>Create Question:</strong> Go to Question Bank -> Add New. Fill details and correct option.</li>
+            <li><strong>Create Exam:</strong> Go to Exams -> Create. 
+                <ul>
+                    <li>Step 1: Basic Info (Title, Duration).</li>
+                    <li>Step 2: Add Questions from Bank.</li>
+                    <li>Step 3: Set Proctoring Config (High/Medium/Low Security).</li>
+                    <li>Step 4: Assign to Groups.</li>
+                </ul>
+            </li>
+            <li><strong>Publish:</strong> Click "Publish" to make it visible to students at start time.</li>
+            <li><strong>Analytics:</strong> Open Exam details -> Analytics tab to view histograms and pass rates.</li>
+        </ol>
+
+        <h2>A.3 Admin Guide</h2>
+        <ol>
+            <li><strong>User Management:</strong> Use "Bulk Import" to upload CSV of students.</li>
+            <li><strong>Monitoring:</strong> Open "Live Monitor" to see active exam sessions and violation alerts in real-time.</li>
+        </ol>
+    </section>

@@ -1,0 +1,145 @@
+
+    <!-- CHAPTER 4 -->
+    <section>
+        <h1>CHAPTER 4: IMPLEMENTATION</h1>
+        
+        <h2>4.1 Technology Stack</h2>
+        <p>The implementation uses the <strong>MERN Stack</strong>, selected for its consistency (JavaScript/TypeScript everywhere) and robust ecosystem.</p>
+        
+        <table>
+            <tr>
+                <th>Component</th>
+                <th>Technology</th>
+                <th>Version</th>
+                <th>Purpose</th>
+            </tr>
+            <tr>
+                <td>Frontend</td>
+                <td>React.js</td>
+                <td>v18.3.1</td>
+                <td>Building the interactive user interface.</td>
+            </tr>
+            <tr>
+                <td>Backend</td>
+                <td>Node.js & Express</td>
+                <td>v20+ / v4.18</td>
+                <td>Server-side logic and API handling.</td>
+            </tr>
+            <tr>
+                <td>Database</td>
+                <td>MongoDB</td>
+                <td>v8.0</td>
+                <td>NoSQL database for flexible data storage.</td>
+            </tr>
+            <tr>
+                <td>Language</td>
+                <td>TypeScript</td>
+                <td>v5.3</td>
+                <td>Static typing for better code quality.</td>
+            </tr>
+            <tr>
+                <td>Real-time</td>
+                <td>Socket.io</td>
+                <td>v4.8</td>
+                <td>WebSocket communication for proctoring.</td>
+            </tr>
+        </table>
+
+        <h2>4.2 Backend Implementation</h2>
+        
+        <h3>4.2.1 Server Entry Point (server.ts)</h3>
+        <p>The server initializes the Express app, connects to MongoDB, and sets up middleware including CORS and Helmet for security.</p>
+        <pre>
+import express from 'express';
+import connectDB from './config/db';
+import { initSocket } from './socket';
+
+const app = express();
+app.use(express.json());
+app.use(helmet());
+app.use(cors());
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/exams', examRoutes);
+
+const server = http.createServer(app);
+const io = initSocket(server); // Initialize Socket.io
+
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
+        </pre>
+
+        <h3>4.2.2 Authentication Controller</h3>
+        <p>We use <strong>JSON Web Tokens (JWT)</strong> for stateless authentication. Passwords are hashed using <strong>bcryptjs</strong>.</p>
+        <pre>
+export const login = async (req: Request, res: Response) => {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    
+    if (user && (await bcrypt.compare(password, user.password))) {
+        res.json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            token: generateToken(user._id),
+        });
+    } else {
+        res.status(401).json({ message: 'Invalid credentials' });
+    }
+};
+        </pre>
+
+        <h3>4.2.3 Real-time Proctoring Logic (Socket.io)</h3>
+        <p>The socket server listens for specific events like <code>proctor-alert</code> to broadcast violations to the monitoring dashboard.</p>
+        <pre>
+io.on('connection', (socket) => {
+    socket.on('join-room', (roomId) => {
+        socket.join(roomId);
+    });
+
+    socket.on('proctor-alert', (data) => {
+        // Broadcast violation to proctors monitoring this exam
+        io.to(data.examId).emit('monitor-proctor-alert', data);
+        
+        // Log violation to database
+        createViolationLog(data);
+    });
+});
+        </pre>
+
+        <h2>4.3 Frontend Implementation</h2>
+        
+        <h3>4.3.1 Component Structure</h3>
+        <p>The frontend is organized into <code>components</code> (reusable UI) and <code>pages</code> (views). We use <strong>Tailwind CSS</strong> for styling.</p>
+        
+        <h3>4.3.2 Protected Routes</h3>
+        <p>A Higher-Order Component (HOC) wraps protected pages to ensure only authorized users with correct roles can access them.</p>
+        <pre>
+const ProtectedRoute = ({ allowedRoles }: Props) => {
+    const { user } = useAuth();
+    
+    if (!user) return <Navigate to="/login" />;
+    
+    if (allowedRoles && !allowedRoles.includes(user.role)) {
+        return <Navigate to="/unauthorized" />;
+    }
+    
+    return <Outlet />;
+};
+        </pre>
+
+        <h2>4.4 Core Algorithms</h2>
+        <h3>4.4.1 Auto-Proctoring Algorithm</h3>
+        <p>The client-side application monitors the window state using the Page Visibility API and Fullscreen API.</p>
+        <ol>
+            <li><strong>Event Listener:</strong> <code>visibilitychange</code> detects tab switching.</li>
+            <li><strong>Event Listener:</strong> <code>fullscreenchange</code> detects exit from secure mode.</li>
+            <li><strong>Action:</strong> If triggered, increment violation counter locally and emit socket event.</li>
+            <li><strong>Threshold:</strong> If violations > 3, auto-submit the exam.</li>
+        </ol>
+    </section>
+
+    <div class="page-break"></div>
