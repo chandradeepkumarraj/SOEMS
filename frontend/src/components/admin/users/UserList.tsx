@@ -116,14 +116,14 @@ export default function UserList({ refreshTrigger }: UserListProps) {
                         placeholder="Search by name, email..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary w-full"
+                        className="pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
                     />
                 </div>
                 <div className="flex gap-2">
                     <select
                         value={selectedRole}
                         onChange={(e) => setSelectedRole(e.target.value as any)}
-                        className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
+                        className="px-3 py-2 text-sm border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
                     >
                         <option value="all">All Roles</option>
                         <option value="student">Students</option>
@@ -144,19 +144,19 @@ export default function UserList({ refreshTrigger }: UserListProps) {
                 </div>
             )}
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden">
                 <div className="overflow-x-auto max-h-[600px] overflow-y-auto custom-scrollbar">
                     <table className="w-full text-left sticky-header">
-                        <thead className="bg-gray-50 text-gray-500 text-sm sticky top-0 z-10 shadow-sm">
+                        <thead className="bg-gray-50 dark:bg-slate-800 text-gray-500 dark:text-slate-400 text-sm sticky top-0 z-10 shadow-sm">
                             <tr>
-                                <th className="px-6 py-4 font-medium bg-gray-50">Name</th>
-                                <th className="px-6 py-4 font-medium bg-gray-50">Role</th>
-                                <th className="px-6 py-4 font-medium bg-gray-50">Email</th>
-                                <th className="px-6 py-4 font-medium bg-gray-50">Roll No</th>
-                                <th className="px-6 py-4 font-medium text-right bg-gray-50">Actions</th>
+                                <th className="px-6 py-4 font-medium bg-gray-50 dark:bg-slate-800">Name</th>
+                                <th className="px-6 py-4 font-medium bg-gray-50 dark:bg-slate-800">Role</th>
+                                <th className="px-6 py-4 font-medium bg-gray-50 dark:bg-slate-800">Email</th>
+                                <th className="px-6 py-4 font-medium bg-gray-50 dark:bg-slate-800">Roll No</th>
+                                <th className="px-6 py-4 font-medium text-right bg-gray-50 dark:bg-slate-800">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
                             {loading ? (
                                 <tr>
                                     <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
@@ -168,28 +168,28 @@ export default function UserList({ refreshTrigger }: UserListProps) {
                                 </tr>
                             ) : filteredUsers.length > 0 ? (
                                 filteredUsers.map((user: any) => (
-                                    <tr key={user._id} className="hover:bg-gray-50/50 transition-colors">
+                                    <tr key={user._id} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/50 transition-colors">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-xs uppercase">
+                                                <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-gray-600 dark:text-slate-400 font-bold text-xs uppercase">
                                                     {user.name?.charAt(0)}
                                                 </div>
                                                 <div className="flex flex-col">
-                                                    <span className="font-medium text-gray-900">{user.name}</span>
-                                                    {user.groupId && <span className="text-xs text-gray-400">Has Group</span>}
+                                                    <span className="font-medium text-gray-900 dark:text-slate-100">{user.name}</span>
+                                                    {user.groupId && <span className="text-xs text-gray-400 dark:text-slate-500">Has Group</span>}
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                                                user.role === 'teacher' ? 'bg-emerald-100 text-emerald-800' :
-                                                    'bg-blue-100 text-blue-800'
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${user.role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' :
+                                                user.role === 'teacher' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' :
+                                                    'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
                                                 }`}>
                                                 {user.role}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
-                                        <td className="px-6 py-4 text-sm font-mono text-gray-500">{user.rollNo || '-'}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-600 dark:text-slate-400">{user.email}</td>
+                                        <td className="px-6 py-4 text-sm font-mono text-gray-500 dark:text-slate-500">{user.rollNo || '-'}</td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex justify-end gap-2">
                                                 {user.role !== 'admin' && (
@@ -215,32 +215,32 @@ export default function UserList({ refreshTrigger }: UserListProps) {
             </div>
 
             {showAddModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200 border border-gray-200 dark:border-slate-800">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-bold">Add New User</h3>
-                            <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">
+                            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Add New User</h3>
+                            <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200">
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
                         <form onSubmit={handleCreateUser} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Full Name</label>
                                     <input
                                         required
-                                        className="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary"
+                                        className="w-full px-3 py-2 border dark:border-slate-700 rounded-lg focus:ring-primary focus:border-primary bg-white dark:bg-slate-950 text-slate-900 dark:text-white"
                                         value={newUser.name}
                                         onChange={e => setNewUser({ ...newUser, name: e.target.value })}
                                         placeholder="Enter your name"
                                     />
                                 </div>
                                 <div className="col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Email</label>
                                     <input
                                         required
                                         type="email"
-                                        className="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary"
+                                        className="w-full px-3 py-2 border dark:border-slate-700 rounded-lg focus:ring-primary focus:border-primary bg-white dark:bg-slate-950 text-slate-900 dark:text-white"
                                         value={newUser.email}
                                         onChange={e => setNewUser({ ...newUser, email: e.target.value })}
                                         placeholder="email@example.com"
@@ -249,20 +249,20 @@ export default function UserList({ refreshTrigger }: UserListProps) {
                                 {newUser.role === 'student' && (
                                     <>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Roll No (13 digit)</label>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Roll No (13 digit)</label>
                                             <input
                                                 required
-                                                className="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary"
+                                                className="w-full px-3 py-2 border dark:border-slate-700 rounded-lg focus:ring-primary focus:border-primary bg-white dark:bg-slate-950 text-slate-900 dark:text-white"
                                                 value={newUser.rollNo}
                                                 onChange={e => setNewUser({ ...newUser, rollNo: e.target.value })}
                                                 placeholder="1234567890123"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Phone</label>
                                             <input
                                                 required
-                                                className="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary"
+                                                className="w-full px-3 py-2 border dark:border-slate-700 rounded-lg focus:ring-primary focus:border-primary bg-white dark:bg-slate-950 text-slate-900 dark:text-white"
                                                 value={newUser.phoneNumber}
                                                 onChange={e => setNewUser({ ...newUser, phoneNumber: e.target.value })}
                                                 placeholder="9876543210"
@@ -271,20 +271,20 @@ export default function UserList({ refreshTrigger }: UserListProps) {
                                     </>
                                 )}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Password</label>
                                     <input
                                         required
                                         type="text"
-                                        className="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary"
+                                        className="w-full px-3 py-2 border dark:border-slate-700 rounded-lg focus:ring-primary focus:border-primary bg-white dark:bg-slate-950 text-slate-900 dark:text-white"
                                         value={newUser.password}
                                         onChange={e => setNewUser({ ...newUser, password: e.target.value })}
                                         placeholder="Min 6 chars"
                                     />
                                 </div>
                                 <div className={newUser.role !== 'student' ? 'col-span-1' : ''}>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Role</label>
                                     <select
-                                        className="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary"
+                                        className="w-full px-3 py-2 border dark:border-slate-700 rounded-lg focus:ring-primary focus:border-primary bg-white dark:bg-slate-950 text-slate-900 dark:text-white"
                                         value={newUser.role}
                                         onChange={e => {
                                             const role = e.target.value;
@@ -304,10 +304,10 @@ export default function UserList({ refreshTrigger }: UserListProps) {
                                 </div>
                                 {newUser.role !== 'student' && (
                                     <div className="col-span-2">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Phone Number</label>
                                         <input
                                             required
-                                            className="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary"
+                                            className="w-full px-3 py-2 border dark:border-slate-700 rounded-lg focus:ring-primary focus:border-primary bg-white dark:bg-slate-950 text-slate-900 dark:text-white"
                                             value={newUser.phoneNumber}
                                             onChange={e => setNewUser({ ...newUser, phoneNumber: e.target.value })}
                                             placeholder="10 digit mobile number"
@@ -317,9 +317,9 @@ export default function UserList({ refreshTrigger }: UserListProps) {
                                 {newUser.role === 'student' && (
                                     <>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Group</label>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Group</label>
                                             <select
-                                                className="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary"
+                                                className="w-full px-3 py-2 border dark:border-slate-700 rounded-lg focus:ring-primary focus:border-primary bg-white dark:bg-slate-950 text-slate-900 dark:text-white"
                                                 value={newUser.groupId}
                                                 onChange={e => {
                                                     setNewUser({ ...newUser, groupId: e.target.value, subgroupId: '' });
@@ -331,9 +331,9 @@ export default function UserList({ refreshTrigger }: UserListProps) {
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Subgroup</label>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Subgroup</label>
                                             <select
-                                                className="w-full px-3 py-2 border rounded-lg focus:ring-primary focus:border-primary"
+                                                className="w-full px-3 py-2 border dark:border-slate-700 rounded-lg focus:ring-primary focus:border-primary bg-white dark:bg-slate-950 text-slate-900 dark:text-white"
                                                 value={newUser.subgroupId}
                                                 disabled={!newUser.groupId}
                                                 onChange={e => setNewUser({ ...newUser, subgroupId: e.target.value })}

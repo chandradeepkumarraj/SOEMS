@@ -1,237 +1,288 @@
+import { useState, useRef } from 'react';
 import { Button } from '../components/ui/Button';
-import { ArrowRight, Shield, Clock, Brain, Lock, Users, BarChart, CheckCircle } from 'lucide-react';
+import {
+    ArrowRight, Shield, Cpu, Zap, Lock, Users,
+    Activity, Sun, Moon, BarChart3,
+    Eye, Server
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useTheme } from '../context/ThemeContext';
 
 export default function Landing() {
+    const { theme, toggleTheme } = useTheme();
+    const heroRef = useRef<HTMLDivElement>(null);
+    const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (!heroRef.current) return;
+        const rect = heroRef.current.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width - 0.5;
+        const y = (e.clientY - rect.top) / rect.height - 0.5;
+        setMousePosition({ x, y });
+    };
+
     return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-            {/* Navigation */}
-            <nav className="border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-500 overflow-x-hidden">
+            {/* Theme Toggle & Nav */}
+            <nav className="fixed top-0 w-full z-50 border-b border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-950/70 backdrop-blur-xl">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16 items-center">
-                        <motion.div
-                            className="flex items-center gap-2"
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                        >
-                            <Shield className="h-8 w-8 text-primary" />
-                            <span className="text-2xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">SOEMS</span>
-                        </motion.div>
-                        <motion.div
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                        >
+                    <div className="flex justify-between h-20 items-center">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-primary rounded-xl shadow-lg shadow-primary/20">
+                                <Shield className="h-6 w-6 text-white" />
+                            </div>
+                            <span className="text-2xl font-black tracking-tighter text-slate-900 dark:text-white">SOEMS</span>
+                        </div>
+
+                        <div className="hidden md:flex items-center gap-10 text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest">
+                            <a href="#features" className="hover:text-primary transition-colors">Strategic Features</a>
+                            <a href="#intelligence" className="hover:text-primary transition-colors">Core Intelligence</a>
+                            <a href="#access" className="hover:text-primary transition-colors">Access Portal</a>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={toggleTheme}
+                                className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            >
+                                {theme === 'dark' ? <Sun className="h-5 w-5 text-yellow-400" /> : <Moon className="h-5 w-5 text-slate-600" />}
+                            </button>
                             <Link to="/login">
-                                <Button className="gap-2">
-                                    Sign In <ArrowRight className="h-4 w-4" />
+                                <Button variant="ghost" className="hidden sm:flex text-slate-900 dark:text-slate-100 font-black uppercase tracking-widest text-[10px]">Sign In</Button>
+                            </Link>
+                            <Link to="/login">
+                                <Button className="bg-primary hover:bg-primary-dark text-white rounded-full px-6 shadow-xl shadow-primary/20">
+                                    Get Started
                                 </Button>
                             </Link>
-                        </motion.div>
+                        </div>
                     </div>
                 </div>
             </nav>
 
-            {/* Hero Section */}
-            <div className="relative overflow-hidden pt-20 pb-32">
-                {/* Animated Background */}
-                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <main>
+                {/* 3D Hero Section */}
+                <section
+                    ref={heroRef}
+                    onMouseMove={handleMouseMove}
+                    className="relative pt-48 pb-32 px-4 flex flex-col items-center justify-center text-center overflow-hidden"
+                >
+                    {/* Background Parallax Elements */}
                     <motion.div
-                        className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-primary/10 blur-3xl"
+                        className="absolute top-1/4 -left-12 w-64 h-64 bg-primary/10 rounded-full blur-[100px]"
                         animate={{
-                            scale: [1, 1.2, 1],
-                            opacity: [0.3, 0.5, 0.3]
+                            x: mousePosition.x * 50,
+                            y: mousePosition.y * 50,
                         }}
-                        transition={{ duration: 8, repeat: Infinity }}
                     />
                     <motion.div
-                        className="absolute top-1/2 -right-24 w-64 h-64 rounded-full bg-blue-400/10 blur-3xl"
+                        className="absolute bottom-1/4 -right-12 w-64 h-64 bg-accent/10 rounded-full blur-[100px]"
                         animate={{
-                            scale: [1.2, 1, 1.2],
-                            opacity: [0.4, 0.6, 0.4]
+                            x: mousePosition.x * -50,
+                            y: mousePosition.y * -50,
                         }}
-                        transition={{ duration: 6, repeat: Infinity }}
                     />
-                </div>
 
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                     <motion.div
-                        className="text-center max-w-4xl mx-auto"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6 }}
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+                        className="relative z-10 perspective-1000"
                     >
-                        <motion.div
-                            className="inline-block mb-6 px-4 py-2 bg-blue-50 rounded-full text-sm text-primary font-medium"
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 0.2 }}
-                        >
-                            🚀 Next-Gen Examination Platform
-                        </motion.div>
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-black uppercase tracking-[0.2em] mb-8">
+                            <Zap className="h-3 w-3 fill-primary" />
+                            Next-Gen protocol
+                        </div>
 
-                        <h1 className="text-5xl md:text-6xl font-bold text-gray-900 tracking-tight mb-6 leading-tight">
-                            Secure, Intelligent{' '}
-                            <br />
-                            <span className="bg-gradient-to-r from-primary via-blue-600 to-purple-600 bg-clip-text text-transparent">
-                                Examination Management
-                            </span>
+                        <h1 className="text-6xl md:text-8xl font-black leading-[0.9] tracking-tighter mb-8 text-slate-900 dark:text-white">
+                            SECURE <br />
+                            <span className="text-gradient">INTELLIGENCE</span>
                         </h1>
 
-                        <p className="text-xl md:text-2xl text-gray-600 mb-10 max-w-3xl mx-auto leading-relaxed">
-                            The complete platform for conducting secure online exams with admin-controlled access,
-                            real-time monitoring, and AI-powered analytics.
+                        <p className="max-w-2xl mx-auto text-slate-900 dark:text-slate-100 text-lg md:text-xl font-bold leading-relaxed mb-12">
+                            The definitive environment for high-stakes academic integrity, powered by real-time behavioral analytics.
+                            Engineered for <span className="text-primary font-bold">maximum focus</span> and
+                            <span className="text-accent font-bold"> zero compromise</span> security.
                         </p>
 
-                        <motion.div
-                            className="flex flex-col sm:flex-row justify-center gap-4 mb-12"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.4 }}
-                        >
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
                             <Link to="/login">
-                                <Button size="lg" className="gap-2 text-lg px-8 py-6 shadow-lg hover:shadow-xl transition-shadow">
-                                    Get Started <ArrowRight className="h-5 w-5" />
+                                <Button size="lg" className="h-16 px-10 rounded-2xl bg-primary hover:bg-primary-dark text-white text-lg font-black shadow-2xl shadow-primary/20 group">
+                                    ESTABLISH SESSION
+                                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                                 </Button>
                             </Link>
-                        </motion.div>
-
-                        {/* Trust Indicators */}
-                        <motion.div
-                            className="flex flex-wrap justify-center gap-8 text-sm text-gray-600"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.6 }}
-                        >
-                            <div className="flex items-center gap-2">
-                                <CheckCircle className="h-5 w-5 text-green-600" />
-                                <span>Admin-Only Access Control</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <CheckCircle className="h-5 w-5 text-green-600" />
-                                <span>Real-Time Monitoring</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <CheckCircle className="h-5 w-5 text-green-600" />
-                                <span>Secure & Encrypted</span>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                </div>
-            </div>
-
-            {/* Features Grid */}
-            <div className="py-24 bg-white">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <motion.div
-                        className="text-center mb-16"
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                    >
-                        <h2 className="text-4xl font-bold text-gray-900 mb-4">Powerful Features</h2>
-                        <p className="text-xl text-gray-600">Everything you need for modern online examinations</p>
-                    </motion.div>
-
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {[
-                            {
-                                icon: Lock,
-                                title: 'Admin-Controlled Access',
-                                description: 'Only administrators can create users. Student and teacher accounts are managed centrally for maximum security.',
-                                color: 'purple'
-                            },
-                            {
-                                icon: Shield,
-                                title: 'Live Proctoring Monitor',
-                                description: 'Real-time monitoring of active exams with instant alerts for suspicious activities and tab switching.',
-                                color: 'blue'
-                            },
-                            {
-                                icon: Clock,
-                                title: 'Real-time Analytics',
-                                description: 'Instant insights into student performance, exam difficulty, and class progress with live updates.',
-                                color: 'green'
-                            },
-                            {
-                                icon: Brain,
-                                title: 'Smart Question Bank',
-                                description: 'Create and manage diverse question types with automated grading and intelligent randomization.',
-                                color: 'orange'
-                            },
-                            {
-                                icon: Users,
-                                title: 'User Management',
-                                description: 'Comprehensive admin panel for managing students, teachers, and system settings with CSV import/export.',
-                                color: 'pink'
-                            },
-                            {
-                                icon: BarChart,
-                                title: 'Advanced Reports',
-                                description: 'Detailed analytics with score distributions, question analysis, and downloadable performance reports.',
-                                color: 'indigo'
-                            }
-                        ].map((feature, index) => (
-                            <motion.div
-                                key={feature.title}
-                                className="group relative p-8 rounded-2xl bg-gradient-to-br from-gray-50 to-white border border-gray-200 hover:border-primary/50 hover:shadow-xl transition-all duration-300"
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: index * 0.1 }}
-                                whileHover={{ y: -5 }}
-                            >
-                                <div className={`w-14 h-14 bg-${feature.color}-100 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
-                                    <feature.icon className={`h-7 w-7 text-${feature.color}-600`} />
+                            <div className="flex items-center gap-3 px-6 py-3 rounded-2xl border-2 border-slate-400 dark:border-slate-500 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm font-black uppercase tracking-widest shadow-xl">
+                                <div className="flex -space-x-2">
+                                    {[1, 2, 3].map(i => <div key={i} className="h-6 w-6 rounded-full border-2 border-slate-50 dark:border-slate-950 bg-slate-200 dark:bg-slate-800" />)}
                                 </div>
-                                <h3 className="text-xl font-bold mb-3 text-gray-900">{feature.title}</h3>
-                                <p className="text-gray-600 leading-relaxed">
-                                    {feature.description}
-                                </p>
-                            </motion.div>
-                        ))}
-                    </div>
-                </div>
-            </div>
+                                2.4k+ Active Users
+                            </div>
+                        </div>
+                    </motion.div>
 
-            {/* CTA Section */}
-            <div className="py-24 bg-gradient-to-r from-primary to-blue-600">
-                <div className="max-w-4xl mx-auto text-center px-4">
+                    {/* 3D Visual Hub Mockup */}
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
+                        className="mt-20 relative w-full max-w-5xl aspect-video glass-card rounded-3xl p-4 overflow-hidden shadow-2xl preserve-3d"
+                        style={{
+                            rotateX: mousePosition.y * -15,
+                            rotateY: mousePosition.x * 15,
+                        }}
                     >
-                        <h2 className="text-4xl font-bold text-white mb-6">
-                            Ready to Transform Your Examinations?
-                        </h2>
-                        <p className="text-xl text-blue-100 mb-8">
-                            Join educational institutions using SOEMS for secure, efficient online testing.
+                        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+                        <div className="h-full w-full rounded-2xl bg-slate-100/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 flex items-center justify-center relative">
+                            <div className="absolute top-6 left-6 flex gap-2">
+                                <div className="h-3 w-3 rounded-full bg-red-400" />
+                                <div className="h-3 w-3 rounded-full bg-yellow-400" />
+                                <div className="h-3 w-3 rounded-full bg-green-400" />
+                            </div>
+                            <Cpu className="h-24 w-24 text-primary/20 animate-pulse" />
+                            <div className="absolute bottom-6 right-6 font-mono text-[10px] text-slate-900 dark:text-white font-black">CONSOLE_READY: PORT_8080</div>
+                        </div>
+                    </motion.div>
+                </section>
+
+                {/* Insight: Management & Monitoring */}
+                <section id="features" className="py-32 bg-white dark:bg-slate-900 transition-colors">
+                    <div className="max-w-7xl mx-auto px-4">
+                        <div className="grid lg:grid-cols-2 gap-20 items-center">
+                            <div>
+                                <div className="text-primary font-black uppercase tracking-widest text-sm mb-4">Command Center</div>
+                                <h2 className="text-4xl md:text-5xl font-black mb-8 leading-tight dark:text-white">CENTRALIZED <br /> MANAGEMENT</h2>
+                                <p className="text-slate-600 dark:text-slate-400 text-lg mb-10 leading-relaxed">
+                                    A multi-role hierarchy allows administrators to govern the entire ecosystem while teachers focus on pedagogy. Batch user management with zero-latency synchronization.
+                                </p>
+
+                                <div className="space-y-6">
+                                    <InsightItem
+                                        icon={Users}
+                                        title="Hierarchical Orchestration"
+                                        desc="Granular permissions for Admins, Teachers, and Proctors."
+                                    />
+                                    <InsightItem
+                                        icon={Server}
+                                        title="Infrastructure Resilience"
+                                        desc="Auto-sync protocols ensure no data loss during network flux."
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-6 pt-12">
+                                    <StatCard title="Active Exams" value="128" icon={Activity} color="text-blue-500" />
+                                    <StatCard title="Throughput" value="12mb/s" icon={Zap} color="text-yellow-500" />
+                                </div>
+                                <div className="space-y-6">
+                                    <StatCard title="Security Score" value="A+" icon={Shield} color="text-green-500" />
+                                    <StatCard title="Cloud Health" value="100%" icon={Server} color="text-purple-500" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Insight: Security & Proctoring */}
+                <section id="security" className="py-32 bg-slate-50 dark:bg-slate-950 transition-colors">
+                    <div className="max-w-7xl mx-auto px-4 text-center">
+                        <div className="max-w-3xl mx-auto mb-20">
+                            <h2 className="text-4xl md:text-6xl font-black mb-6 dark:text-white">ELITE PROCTORING</h2>
+                            <p className="text-slate-900 dark:text-slate-100 text-lg mb-10 leading-relaxed font-bold">
+                                Every interaction is cataloged. Every deviation is analyzed. A scholarly fortress built with industrial precision.
+                            </p>
+                        </div>
+
+                        <div className="grid md:grid-cols-3 gap-8">
+                            <SecurityFeature
+                                icon={Eye}
+                                title="Visual Fidelity"
+                                desc="Eye-tracking and presence detection with millisecond refresh rates."
+                            />
+                            <SecurityFeature
+                                icon={Lock}
+                                title="Protocol Lock"
+                                desc="Total environment isolation. Prevents unauthorized tab switching or external input."
+                            />
+                            <SecurityFeature
+                                icon={BarChart3}
+                                title="Anomaly Analytics"
+                                desc="Real-time suspicion scoring based on behavioral patterns."
+                            />
+                        </div>
+                    </div>
+                </section>
+
+                {/* CTA */}
+                <section className="py-40 px-4 relative overflow-hidden bg-primary">
+                    <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1)_0%,transparent_50%)]" />
+                    <div className="max-w-4xl mx-auto text-center relative z-10">
+                        <h2 className="text-5xl md:text-7xl font-black text-white mb-10 leading-tight">THE FUTURE IS <br /> AUTHORIZED.</h2>
+                        <p className="text-xl text-primary-light font-bold mb-12 max-w-xl mx-auto opacity-80">
+                            Join elite institutions redefining digital assessment. Experience the SOEMS difference today.
                         </p>
                         <Link to="/login">
-                            <Button size="lg" variant="outline" className="bg-white text-primary hover:bg-gray-50 text-lg px-8 py-6 border-0">
-                                Sign In Now
+                            <Button size="lg" className="h-20 px-12 rounded-2xl bg-white text-primary hover:bg-slate-100 font-black text-2xl shadow-2xl">
+                                INITIATE DEPLOYMENT
                             </Button>
                         </Link>
-                    </motion.div>
-                </div>
-            </div>
-
-            {/* Footer */}
-            <footer className="bg-gray-900 text-gray-400 py-12">
-                <div className="max-w-7xl mx-auto px-4 text-center">
-                    <div className="flex items-center justify-center gap-2 mb-4">
-                        <Shield className="h-6 w-6 text-primary" />
-                        <span className="text-xl font-bold text-white">SOEMS</span>
                     </div>
-                    <p className="text-sm">
-                        Serverless Online Examination Management System
-                    </p>
-                    <p className="text-xs mt-2">
-                        © 2024 SOEMS. Secure, Reliable, Professional.
-                    </p>
+                </section>
+            </main>
+
+            <footer className="py-20 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-900 transition-colors">
+                <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-10">
+                    <div className="flex items-center gap-3">
+                        <Shield className="h-8 w-8 text-primary" />
+                        <span className="text-2xl font-black tracking-tighter text-slate-900 dark:text-white">SOEMS</span>
+                    </div>
+                    <div className="flex gap-10 text-sm font-bold text-slate-500 uppercase tracking-widest">
+                        <a href="#" className="hover:text-primary">Docs</a>
+                        <a href="#" className="hover:text-primary">Legal</a>
+                        <a href="#" className="hover:text-primary">Privacy</a>
+                    </div>
+                    <div className="text-slate-900 dark:text-white font-black text-[10px] uppercase tracking-[0.2em]">© 2026 SOEMS ANALYTICS ENGINE.</div>
                 </div>
             </footer>
         </div>
+    );
+}
+
+function InsightItem({ icon: Icon, title, desc }: any) {
+    return (
+        <div className="flex gap-6 items-start">
+            <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20">
+                <Icon className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+                <h3 className="text-lg font-black uppercase tracking-tight mb-1 dark:text-white">{title}</h3>
+                <p className="text-slate-600 dark:text-slate-400 text-sm font-medium">{desc}</p>
+            </div>
+        </div>
+    );
+}
+
+function StatCard({ title, value, icon: Icon, color }: any) {
+    return (
+        <div className="p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl transition-transform hover:-translate-y-2 group">
+            <div className={`p-4 rounded-2xl bg-slate-100 dark:bg-slate-800 w-16 h-16 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
+                <Icon className={`h-8 w-8 ${color}`} />
+            </div>
+            <div className="text-slate-400 text-xs font-black uppercase tracking-widest mb-1">{title}</div>
+            <div className="text-3xl font-black dark:text-white">{value}</div>
+        </div>
+    );
+}
+
+function SecurityFeature({ icon: Icon, title, desc }: any) {
+    return (
+        <motion.div
+            whileHover={{ y: -10 }}
+            className="p-10 rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-primary/50 transition-all text-left group"
+        >
+            <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-8 group-hover:bg-primary group-hover:text-white transition-all">
+                <Icon className="h-8 w-8 text-primary group-hover:text-white" />
+            </div>
+            <h3 className="text-2xl font-black mb-4 dark:text-white">{title}</h3>
+            <p className="text-slate-600 dark:text-slate-400 leading-relaxed font-medium">{desc}</p>
+        </motion.div>
     );
 }

@@ -15,6 +15,7 @@ export default function TeacherDashboard() {
         totalExams: 0
     });
     const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const handleDelete = async (id: string, e: React.MouseEvent) => {
         e.preventDefault();
@@ -106,24 +107,24 @@ export default function TeacherDashboard() {
 
     return (
         <>
-            <div className="mb-8 p-6 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row items-center md:items-start justify-between gap-4">
+            <div className="mb-8 p-6 bg-[var(--card-bg)] rounded-xl shadow-[var(--shadow-main)] border border-[var(--border-main)] flex flex-col md:flex-row items-center md:items-start justify-between gap-4 transition-all duration-300">
                 <div className="flex items-center gap-6">
                     <div className="relative group">
                         <img
                             src={user?.avatarUrl || `https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=random`}
                             alt="Profile"
-                            className="w-24 h-24 rounded-full object-cover border-4 border-gray-50 bg-gray-200"
+                            className="w-24 h-24 rounded-full object-cover border-4 border-gray-50 dark:border-slate-800 bg-gray-200 dark:bg-slate-800"
                         />
-                        <Link to="/teacher/profile" className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow border border-gray-100 hover:bg-gray-50 text-gray-500 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity" title="Edit Photo">
+                        <Link to="/teacher/profile" className="absolute bottom-0 right-0 p-2 bg-white dark:bg-slate-800 rounded-full shadow border-2 border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity" title="Edit Photo">
                             <Pencil className="h-4 w-4" />
                         </Link>
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">{user?.name || 'Welcome, Teacher'}</h1>
-                        <p className="text-gray-500">{user?.email}</p>
+                        <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">{user?.name || 'Welcome, Teacher'}</h1>
+                        <p className="text-slate-900 dark:text-slate-400 font-bold italic">{user?.email}</p>
                         {user?.bio && (
-                            <div className="mt-2 text-sm text-gray-600 bg-blue-50 px-3 py-1 rounded inline-block">
-                                <span className="font-semibold mr-2">Bio:</span>
+                            <div className="mt-2 text-sm text-slate-900 dark:text-slate-300 font-bold bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-lg border border-blue-200 dark:border-blue-800 inline-block">
+                                <span className="font-black mr-2 uppercase tracking-widest text-[10px] text-blue-600 dark:text-blue-400">Staff Bio:</span>
                                 {user.bio}
                             </div>
                         )}
@@ -153,78 +154,83 @@ export default function TeacherDashboard() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
-                        className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"
+                        className="bg-[var(--card-bg)] p-6 rounded-xl shadow-[var(--shadow-main)] border border-[var(--border-main)] transition-all duration-300"
                     >
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-gray-500 font-medium">{stat.label}</h3>
-                            <div className={`p-2 rounded-lg ${stat.color} bg-opacity-10 text-${stat.color.replace('bg-', '')}`}>
-                                <stat.icon className={`h-5 w-5 ${stat.color.replace('bg-', 'text-')}`} />
+                            <div>
+                                <h3 className="text-slate-900 dark:text-slate-400 font-black uppercase tracking-[0.2em] text-[10px] mb-1">{stat.label}</h3>
+                                <p className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tighter uppercase">{stat.value}</p>
+                            </div>
+                            <div className={`p-3 rounded-lg ${stat.color} bg-opacity-20 text-${stat.color.replace('bg-', '')}`}>
+                                <stat.icon className={`h-6 w-6 ${stat.color.replace('bg-', 'text-')}`} />
                             </div>
                         </div>
-                        <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
                     </motion.div>
                 ))}
             </div>
 
             {/* Recent Exams */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                    <h2 className="text-lg font-bold text-gray-900">Recent Exams</h2>
+            <div className="bg-[var(--card-bg)] rounded-xl shadow-[var(--shadow-main)] border border-[var(--border-main)] overflow-hidden transition-all duration-300">
+                <div className="p-6 border-b border-[var(--border-main)] flex justify-between items-center">
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100">Recent Exams</h2>
                     <div className="relative">
-                        <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-500" />
                         <input
                             type="text"
                             placeholder="Search exams..."
-                            className="pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary w-64"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-9 pr-4 py-2 text-sm border-2 border-slate-300 dark:border-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary w-64 font-bold text-slate-900 dark:text-slate-100 dark:bg-slate-950 transition-all"
                         />
                     </div>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
-                        <thead className="bg-gray-50 text-gray-500 text-sm">
+                        <thead className="bg-[var(--bg-main)] text-[var(--text-main)] text-[10px] font-black uppercase tracking-widest border-b-2 border-[var(--border-main)]">
                             <tr>
-                                <th className="px-6 py-4 font-medium">Exam Title</th>
-                                <th className="px-6 py-4 font-medium">Date</th>
-                                <th className="px-6 py-4 font-medium">Status</th>
-                                <th className="px-6 py-4 font-medium">Candidates</th>
-                                <th className="px-6 py-4 font-medium text-right">Actions</th>
+                                <th className="px-6 py-4">Exam Identification</th>
+                                <th className="px-6 py-4">Scheduled Date</th>
+                                <th className="px-6 py-4">System Status</th>
+                                <th className="px-6 py-4">Candidate Flow</th>
+                                <th className="px-6 py-4 text-right">Control Console</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
                             {loading ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500 dark:text-slate-500">
                                         Loading exams...
                                     </td>
                                 </tr>
                             ) : exams.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500 dark:text-slate-500">
                                         No exams found. Create your first exam!
                                     </td>
                                 </tr>
                             ) : (
-                                exams.map((exam) => (
-                                    <tr key={exam._id} className="hover:bg-gray-50/50 transition-colors">
+                                exams.filter(exam => exam.title.toLowerCase().includes(searchQuery.toLowerCase())).map((exam) => (
+                                    <tr key={exam._id} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/50 transition-colors">
                                         <td className="px-6 py-4">
-                                            <div className="font-medium text-gray-900">{exam.title}</div>
-                                            <div className="text-xs text-gray-500">ID: #{exam._id.slice(-4)}</div>
+                                            <div className="font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">{exam.title}</div>
+                                            <div className="text-[10px] font-mono font-black text-slate-900/60 dark:text-slate-500 uppercase tracking-widest">ID: {exam._id.slice(-6).toUpperCase()}</div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2 text-gray-600 text-sm">
-                                                <Calendar className="h-4 w-4" />
-                                                {new Date(exam.startTime).toLocaleDateString()}
+                                            <div className="flex items-center gap-2 text-slate-900 dark:text-slate-300 font-bold text-xs uppercase tracking-tight">
+                                                <Calendar className="h-4 w-4 text-primary" />
+                                                {new Date(exam.startTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${exam.status === 'published' ? 'bg-green-100 text-green-800' :
-                                                exam.status === 'draft' ? 'bg-gray-100 text-gray-800' :
-                                                    'bg-blue-100 text-blue-800'
+                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${exam.status === 'published'
+                                                ? 'bg-success/10 text-success border-success/30 shadow-sm shadow-success/10' :
+                                                exam.status === 'draft' ? 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-400 border-slate-200' :
+                                                    'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200'
                                                 }`}>
                                                 {exam.status}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">
+                                        <td className="px-6 py-4 text-xs font-black text-slate-900 dark:text-slate-400 uppercase tracking-widest">
                                             {exam.candidatesCount || 0} Candidates
                                         </td>
                                         <td className="px-6 py-4 text-right">
@@ -232,7 +238,7 @@ export default function TeacherDashboard() {
                                                 {exam.status === 'published' && (
                                                     <button
                                                         onClick={() => handleEndExam(exam._id)}
-                                                        className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-error"
+                                                        className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-slate-900 dark:text-slate-400 hover:text-red-700 dark:hover:text-red-400 transition-colors"
                                                         title="Stop Exam Manually"
                                                     >
                                                         <StopCircle className="h-4 w-4" />
@@ -240,24 +246,24 @@ export default function TeacherDashboard() {
                                                 )}
                                                 <button
                                                     onClick={() => handleDownloadReport(exam._id, exam.title)}
-                                                    className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-green-600"
+                                                    className="p-2 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-lg text-slate-900 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
                                                     title="Download Report"
                                                 >
                                                     <Download className="h-4 w-4" />
                                                 </button>
                                                 <Link to={`/teacher/analytics/${exam._id}`}>
-                                                    <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-primary" title="Analytics">
+                                                    <button className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg text-slate-900 dark:text-slate-400 hover:text-blue-700 dark:hover:text-blue-400 transition-colors" title="Analytics">
                                                         <BarChart3 className="h-4 w-4" />
                                                     </button>
                                                 </Link>
                                                 <Link to={`/teacher/create-exam?edit=${exam._id}`}>
-                                                    <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-blue-600" title="Edit">
+                                                    <button className="p-2 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-lg text-slate-900 dark:text-slate-400 hover:text-amber-700 dark:hover:text-amber-400 transition-colors" title="Edit">
                                                         <Pencil className="h-4 w-4" />
                                                     </button>
                                                 </Link>
                                                 <button
                                                     onClick={(e) => handleDelete(exam._id, e)}
-                                                    className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-600"
+                                                    className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-slate-900 dark:text-slate-400 hover:text-red-700 dark:hover:text-red-400 transition-colors"
                                                     title="Delete"
                                                 >
                                                     <Trash2 className="h-4 w-4" />

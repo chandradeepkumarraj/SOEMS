@@ -6,7 +6,7 @@ let io: Server;
 export const initSocket = (httpServer: HttpServer) => {
     io = new Server(httpServer, {
         cors: {
-            origin: '*', // Allow all for now, restrict in production
+            origin: process.env.FRONTEND_URL || '*', // Restrict to frontend URL in production
             methods: ['GET', 'POST']
         }
     });
@@ -41,8 +41,8 @@ export const initSocket = (httpServer: HttpServer) => {
         });
 
         // Proctoring Events (e.g., tab switch, face not found)
-        socket.on('proctor-alert', (data: { examId: string; studentId: string; alertType: string; message: string }) => {
-            console.log(`[PROCTOR ALERT] ${data.alertType} from student ${data.studentId}: ${data.message}`);
+        socket.on('proctor-alert', (data: { examId: string; studentId: string; studentName: string; studentRollNo?: string; type: string; message: string }) => {
+            console.log(`[PROCTOR ALERT] ${data.type} from student ${data.studentName} (${data.studentRollNo || data.studentId}): ${data.message}`);
             io.to(data.examId).emit('monitor-proctor-alert', data);
             io.to('global-proctor-room').emit('monitor-proctor-alert', data);
         });

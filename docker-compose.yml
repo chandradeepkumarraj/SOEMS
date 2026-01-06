@@ -1,39 +1,50 @@
 version: '3.8'
 
 services:
-  mongodb:
-    image: mongo:latest
-    container_name: soems-db
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-
-  backend:
-    build: 
-      context: ./backend
-      dockerfile: Dockerfile
+  # Backend API Service
+  soems-backend:
+    build: ./backend
     container_name: soems-backend
     ports:
-      - "5000:5000"
+      - "5001:5001"
     environment:
-      - MONGO_URI=mongodb://mongodb:27017/soems
-      - PORT=5000
-      - JWT_SECRET=your_jwt_secret_here
+      - PORT=5001
+      - MONGO_URI=mongodb://mongo:27017/soems
+      - JWT_SECRET=${JWT_SECRET:-soems_secret_key_change_in_prod}
+      - NODE_ENV=production
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
+    volumes:
+      - ./backend/uploads:/app/uploads
     depends_on:
-      - mongodb
+      - mongo
+    networks:
+      - soems-network
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+  # Frontend Web Service
+  soems-frontend:
+    build: ./frontend
     container_name: soems-frontend
     ports:
-      - "5173:5173"
-    environment:
-      - VITE_API_BASE_URL=http://localhost:5000
+      - "80:80"
     depends_on:
-      - backend
+      - soems-backend
+    networks:
+      - soems-network
+
+  # Local MongoDB Database
+  mongo:
+    image: mongo:latest
+    container_name: soems-mongo
+    ports:
+      - "27017:27017" # Exposed to host for local debugging if needed
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - soems-network
+
+networks:
+  soems-network:
+    driver: bridge
 
 volumes:
-  mongo_data:
+  mongo-data:

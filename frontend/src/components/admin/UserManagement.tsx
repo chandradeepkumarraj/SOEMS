@@ -280,7 +280,7 @@ export default function UserManagement() {
                                     </tr>
                                 )) : (
                                     <tr>
-                                        <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                                        <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                                             No users found.
                                         </td>
                                     </tr>

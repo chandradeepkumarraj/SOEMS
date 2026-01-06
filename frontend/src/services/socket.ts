@@ -61,12 +61,25 @@ export const emitExamSubmit = (examId: string, studentId: string) => {
     s.emit('exam-submit', { examId, studentId });
 };
 
-export const emitProctorAlert = (examId: string, studentId: string, alertType: string, message: string) => {
+export const emitProctorAlert = (examId: string, studentId: string, studentName: string, studentRollNo: string, type: string, message: string) => {
     const s = getSocket();
-    s.emit('proctor-alert', { examId, studentId, alertType, message });
+    s.emit('proctor-alert', { examId, studentId, studentName, studentRollNo, type, message });
 };
 export const onExamClosedManually = (callback: (data: any) => void) => {
     const s = getSocket();
     s.on('exam-closed-manually', callback);
     return () => { s.off('exam-closed-manually', callback); };
 };
+
+export const onStudentSuspended = (callback: (data: any) => void) => {
+    const s = getSocket();
+    s.on('student-suspended', callback);
+    return () => { s.off('student-suspended', callback); };
+};
+
+export const onStudentUnsuspended = (callback: (data: any) => void) => {
+    const s = getSocket();
+    s.on('student-unsuspended', callback);
+    return () => { s.off('student-unsuspended', callback); };
+};
+

@@ -38,7 +38,8 @@ export default function CreateExam() {
         proctoringConfig: {
             enableTabLock: true,
             enableFullscreen: true,
-            enableInputLock: true
+            enableInputLock: true,
+            violationThreshold: 5
         }
     });
 
@@ -91,7 +92,8 @@ export default function CreateExam() {
                         proctoringConfig: exam.proctoringConfig || {
                             enableTabLock: true,
                             enableFullscreen: true,
-                            enableInputLock: true
+                            enableInputLock: true,
+                            violationThreshold: 5
                         }
                     } as any);
 
@@ -155,6 +157,10 @@ export default function CreateExam() {
             alert('Please add at least one question.');
             return;
         }
+        if (examData.proctoringConfig.violationThreshold < 1) {
+            alert('Security Threshold must be at least 1.');
+            return;
+        }
 
         setLoading(true);
         try {
@@ -206,27 +212,27 @@ export default function CreateExam() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
             {/* Header */}
-            <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-8 sticky top-0 z-20">
+            <header className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 h-16 flex items-center justify-between px-8 sticky top-0 z-20">
                 <div className="flex items-center gap-4">
                     <Link to="/teacher/dashboard">
-                        <Button variant="ghost" size="sm" className="gap-2 pl-0 hover:bg-transparent">
+                        <Button variant="ghost" size="sm" className="gap-2 pl-0 hover:bg-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100">
                             <ArrowLeft className="h-5 w-5" /> Exit
                         </Button>
                     </Link>
-                    <div className="h-6 w-px bg-gray-200" />
-                    <h1 className="text-lg font-bold text-gray-900">Create New Exam</h1>
+                    <div className="h-6 w-px bg-slate-300 dark:bg-slate-800" />
+                    <h1 className="text-lg font-black text-slate-900 dark:text-slate-100 uppercase tracking-tighter">Secure Exam Designer</h1>
                 </div>
                 <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-500 mr-4">
-                        <span className={step >= 1 ? 'text-primary font-medium' : ''}>1. Details</span>
-                        <span className="text-gray-300">/</span>
-                        <span className={step >= 2 ? 'text-primary font-medium' : ''}>2. Questions</span>
-                        <span className="text-gray-300">/</span>
-                        <span className={step >= 3 ? 'text-primary font-medium' : ''}>3. Review</span>
+                    <div className="flex items-center gap-3 text-[10px] font-black text-slate-900 dark:text-slate-400 uppercase tracking-widest mr-4">
+                        <span className={step >= 1 ? 'text-primary' : 'opacity-40'}>01. Matrix Details</span>
+                        <span className="text-slate-300 dark:text-slate-800">|</span>
+                        <span className={step >= 2 ? 'text-primary' : 'opacity-40'}>02. Data Entry</span>
+                        <span className="text-slate-300 dark:text-slate-800">|</span>
+                        <span className={step >= 3 ? 'text-primary' : 'opacity-40'}>03. Verification</span>
                     </div>
-                    <Button variant="outline" size="sm" className="gap-2">
+                    <Button variant="outline" size="sm" className="gap-2 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700">
                         <Save className="h-4 w-4" /> Save Draft
                     </Button>
                 </div>
@@ -240,10 +246,10 @@ export default function CreateExam() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
-                            className="bg-white rounded-xl shadow-sm border border-gray-200 p-8"
+                            className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 p-8"
                         >
-                            <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                                <FileText className="h-5 w-5 text-primary" /> Exam Details
+                            <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 mb-8 flex items-center gap-3 uppercase tracking-tighter">
+                                <FileText className="h-6 w-6 text-primary" /> Session Configuration
                             </h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="md:col-span-2">
@@ -279,9 +285,9 @@ export default function CreateExam() {
                                     value={examData.time}
                                     onChange={(e) => setExamData({ ...examData, time: e.target.value })}
                                 />
-                                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <div className="space-y-4">
-                                        <label className="block text-sm font-medium text-gray-700">Assign to Groups (Target Audience)</label>
+                                        <label className="block text-xs font-black text-slate-900 dark:text-slate-400 uppercase tracking-widest">Candidate Matrix Eligibility</label>
                                         <div className="flex flex-wrap gap-2">
                                             {groups.map(g => (
                                                 <button
@@ -297,15 +303,15 @@ export default function CreateExam() {
                                                             fetchSubgroupsForGroup(g._id);
                                                         }
                                                     }}
-                                                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${examData.allowedGroups.includes(g._id)
-                                                        ? 'bg-primary text-white border-primary'
-                                                        : 'bg-white text-gray-600 border-gray-200 hover:border-primary'
+                                                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${examData.allowedGroups.includes(g._id)
+                                                        ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20'
+                                                        : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-700 hover:border-primary'
                                                         }`}
                                                 >
                                                     {g.name}
                                                 </button>
                                             ))}
-                                            {groups.length === 0 && <span className="text-xs text-gray-400 italic">No groups available. Creating as public exam.</span>}
+                                            {groups.length === 0 && <span className="text-xs text-slate-900 dark:text-slate-500 font-bold italic">No groups detected. Proceeding as global session.</span>}
                                         </div>
                                     </div>
 
@@ -337,10 +343,10 @@ export default function CreateExam() {
                                     )}
                                 </div>
                                 <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Instructions</label>
+                                    <label className="block text-xs font-black text-slate-900 dark:text-slate-400 uppercase tracking-widest mb-3">Academic Instructions</label>
                                     <textarea
-                                        className="flex w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 min-h-[100px]"
-                                        placeholder="Enter exam instructions for students..."
+                                        className="flex w-full rounded-xl border-2 border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950 px-4 py-3 text-sm font-bold text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all min-h-[120px]"
+                                        placeholder="Define the rules of engagement for this assessment cycle..."
                                         value={examData.instructions}
                                         onChange={(e) => setExamData({ ...examData, instructions: e.target.value })}
                                     />
@@ -351,18 +357,18 @@ export default function CreateExam() {
                                             type="checkbox"
                                             checked={examData.resultsPublished}
                                             onChange={(e) => setExamData({ ...examData, resultsPublished: e.target.checked })}
-                                            className="h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary"
+                                            className="h-4 w-4 text-primary rounded border-gray-300 dark:border-slate-800 focus:ring-primary bg-white dark:bg-slate-950"
                                         />
-                                        <span className="text-sm font-medium text-gray-700">Publish results automatically after exam ends</span>
+                                        <span className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-tight">Auto-Release Intelligence Repository</span>
                                     </label>
-                                    <p className="text-xs text-gray-500 ml-6">If enabled, students can view their scores and detailed answers immediately after the exam window closes.</p>
+                                    <p className="text-xs text-slate-900 dark:text-slate-400 font-bold italic ml-6">Biometric results and analytics will be automatically exposed to candidates upon session closure.</p>
                                 </div>
-                                <div className="md:col-span-2 border-t border-gray-100 pt-6 mt-2">
-                                    <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                        <ShieldAlert className="h-4 w-4 text-primary" /> Proctoring & Security Settings
+                                <div className="md:col-span-2 border-t-2 border-slate-200 dark:border-slate-800 pt-8 mt-4">
+                                    <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 mb-6 flex items-center gap-3 uppercase tracking-[0.2em]">
+                                        <ShieldAlert className="h-5 w-5 text-primary" /> Sentinel Protocols
                                     </h3>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors">
+                                        <div className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
                                             <input
                                                 type="checkbox"
                                                 id="tabLock"
@@ -371,14 +377,14 @@ export default function CreateExam() {
                                                     ...examData,
                                                     proctoringConfig: { ...examData.proctoringConfig, enableTabLock: e.target.checked }
                                                 })}
-                                                className="mt-1 h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary"
+                                                className="mt-1 h-4 w-4 text-primary rounded border-gray-300 dark:border-slate-800 focus:ring-primary bg-white dark:bg-slate-950"
                                             />
                                             <label htmlFor="tabLock" className="cursor-pointer">
-                                                <span className="text-sm font-medium text-gray-700 block">Tab Lock</span>
-                                                <span className="text-[10px] text-gray-500">Detect tab/window switching</span>
+                                                <span className="text-sm font-medium text-gray-700 dark:text-slate-300 block">Tab Lock</span>
+                                                <span className="text-[10px] text-gray-500 dark:text-slate-500">Detect tab/window switching</span>
                                             </label>
                                         </div>
-                                        <div className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors">
+                                        <div className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
                                             <input
                                                 type="checkbox"
                                                 id="fullscreen"
@@ -387,14 +393,14 @@ export default function CreateExam() {
                                                     ...examData,
                                                     proctoringConfig: { ...examData.proctoringConfig, enableFullscreen: e.target.checked }
                                                 })}
-                                                className="mt-1 h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary"
+                                                className="mt-1 h-4 w-4 text-primary rounded border-gray-300 dark:border-slate-800 focus:ring-primary bg-white dark:bg-slate-950"
                                             />
                                             <label htmlFor="fullscreen" className="cursor-pointer">
-                                                <span className="text-sm font-medium text-gray-700 block">Force Fullscreen</span>
-                                                <span className="text-[10px] text-gray-500">Exam must be in fullscreen</span>
+                                                <span className="text-sm font-medium text-gray-700 dark:text-slate-300 block">Force Fullscreen</span>
+                                                <span className="text-[10px] text-gray-500 dark:text-slate-500">Exam must be in fullscreen</span>
                                             </label>
                                         </div>
-                                        <div className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors">
+                                        <div className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
                                             <input
                                                 type="checkbox"
                                                 id="inputLock"
@@ -403,12 +409,37 @@ export default function CreateExam() {
                                                     ...examData,
                                                     proctoringConfig: { ...examData.proctoringConfig, enableInputLock: e.target.checked }
                                                 })}
-                                                className="mt-1 h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary"
+                                                className="mt-1 h-4 w-4 text-primary rounded border-gray-300 dark:border-slate-800 focus:ring-primary bg-white dark:bg-slate-950"
                                             />
                                             <label htmlFor="inputLock" className="cursor-pointer">
-                                                <span className="text-sm font-medium text-gray-700 block">Input Lockdown</span>
-                                                <span className="text-[10px] text-gray-500">Block Ctrl+C, Ctrl+V, etc.</span>
+                                                <span className="text-sm font-medium text-gray-700 dark:text-slate-300 block">Input Lockdown</span>
+                                                <span className="text-[10px] text-gray-500 dark:text-slate-500">Block Ctrl+C, Ctrl+V, etc.</span>
                                             </label>
+                                        </div>
+                                        <div className="md:col-span-3 flex items-center justify-between p-4 bg-red-50/50 dark:bg-red-900/10 rounded-xl border border-red-100/50 dark:border-red-900/20">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg">
+                                                    <ShieldAlert className="h-5 w-5" />
+                                                </div>
+                                                <div>
+                                                    <span className="text-sm font-bold text-gray-900 dark:text-slate-100 block">Enforcement Threshold</span>
+                                                    <span className="text-xs text-gray-500 dark:text-slate-400">Maximum violations allowed before auto-submission and suspension.</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3 bg-white dark:bg-slate-950 p-1 rounded-lg border border-red-200 dark:border-red-900/50 shadow-sm">
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="50"
+                                                    value={examData.proctoringConfig.violationThreshold}
+                                                    onChange={(e) => setExamData({
+                                                        ...examData,
+                                                        proctoringConfig: { ...examData.proctoringConfig, violationThreshold: parseInt(e.target.value) || 1 }
+                                                    })}
+                                                    className="w-16 text-center font-black text-red-600 dark:text-red-400 bg-transparent focus:outline-none text-lg"
+                                                />
+                                                <span className="text-[10px] font-black text-red-400 dark:text-red-500 uppercase tracking-widest pr-2">Chances</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -430,29 +461,29 @@ export default function CreateExam() {
                             className="space-y-6"
                         >
                             <div className="flex justify-between items-center">
-                                <h2 className="text-xl font-bold text-gray-900">Questions Builder</h2>
-                                <Button onClick={handleAddQuestion} variant="outline" className="gap-2">
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">Questions Builder</h2>
+                                <Button onClick={handleAddQuestion} variant="outline" className="gap-2 text-slate-900 dark:text-slate-100 border-slate-300 dark:border-slate-800">
                                     <Plus className="h-4 w-4" /> Add Question
                                 </Button>
                             </div>
 
                             {questions.map((q, qIndex) => (
-                                <div key={q.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative group">
+                                <div key={q.id} className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 p-6 relative group">
                                     <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button
                                             onClick={() => handleDeleteQuestion(q.id)}
-                                            className="p-2 text-gray-400 hover:text-error hover:bg-red-50 rounded-lg transition-colors"
+                                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-error hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                                         >
                                             <Trash2 className="h-5 w-5" />
                                         </button>
                                     </div>
 
                                     <div className="mb-4 pr-10">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5">
                                             Question {qIndex + 1}
                                         </label>
                                         <textarea
-                                            className="w-full rounded-lg border border-gray-300 p-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                                            className="w-full rounded-lg border border-gray-300 dark:border-slate-800 p-3 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-all"
                                             placeholder="Type your question here..."
                                             value={q.text}
                                             onChange={(e) => handleQuestionChange(q.id, 'text', e.target.value)}
@@ -480,10 +511,10 @@ export default function CreateExam() {
                                     </div>
 
                                     <div className="mt-4 flex items-center gap-2 justify-end">
-                                        <span className="text-sm text-gray-500">Points:</span>
+                                        <span className="text-sm text-gray-500 dark:text-slate-400">Points:</span>
                                         <input
                                             type="number"
-                                            className="w-16 rounded-lg border border-gray-300 p-1.5 text-sm text-center focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                                            className="w-16 rounded-lg border border-gray-300 dark:border-slate-800 p-1.5 text-sm text-center focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100"
                                             value={q.points}
                                             onChange={(e) => handleQuestionChange(q.id, 'points', parseInt(e.target.value))}
                                         />
@@ -508,37 +539,43 @@ export default function CreateExam() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
-                            className="bg-white rounded-xl shadow-sm border border-gray-200 p-8"
+                            className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 p-8"
                         >
                             <div className="text-center mb-8">
-                                <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <div className="h-16 w-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                                     <CheckCircle2 className="h-8 w-8 text-success" />
                                 </div>
-                                <h2 className="text-2xl font-bold text-gray-900">Ready to Publish?</h2>
-                                <p className="text-gray-500">Review your exam details before making it live.</p>
+                                <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Ready to Publish?</h2>
+                                <p className="text-gray-500 dark:text-slate-400">Review your exam details before making it live.</p>
                             </div>
 
-                            <div className="bg-gray-50 rounded-xl p-6 mb-8 space-y-4">
-                                <div className="flex justify-between border-b border-gray-200 pb-4">
-                                    <span className="text-gray-500">Title</span>
-                                    <span className="font-medium text-gray-900">{examData.title || 'Untitled Exam'}</span>
+                            <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-6 mb-8 space-y-4 border border-gray-100 dark:border-slate-700">
+                                <div className="flex justify-between border-b border-gray-200 dark:border-slate-700 pb-4">
+                                    <span className="text-gray-500 dark:text-slate-400">Title</span>
+                                    <span className="font-medium text-gray-900 dark:text-slate-100">{examData.title || 'Untitled Exam'}</span>
                                 </div>
-                                <div className="flex justify-between border-b border-gray-200 pb-4">
-                                    <span className="text-gray-500">Subject</span>
-                                    <span className="font-medium text-gray-900">{examData.subject || 'N/A'}</span>
+                                <div className="flex justify-between border-b border-gray-200 dark:border-slate-700 pb-4">
+                                    <span className="text-gray-500 dark:text-slate-400">Subject</span>
+                                    <span className="font-medium text-gray-900 dark:text-slate-100">{examData.subject || 'N/A'}</span>
                                 </div>
-                                <div className="flex justify-between border-b border-gray-200 pb-4">
-                                    <span className="text-gray-500">Duration</span>
-                                    <span className="font-medium text-gray-900">{examData.duration} mins</span>
+                                <div className="flex justify-between border-b border-gray-200 dark:border-slate-700 pb-4">
+                                    <span className="text-gray-500 dark:text-slate-400">Duration</span>
+                                    <span className="font-medium text-gray-900 dark:text-slate-100">{examData.duration} mins</span>
                                 </div>
-                                <div className="flex justify-between border-b border-gray-200 pb-4">
-                                    <span className="text-gray-500">Total Questions</span>
-                                    <span className="font-medium text-gray-900">{questions.length}</span>
+                                <div className="flex justify-between border-b border-gray-200 dark:border-slate-700 pb-4">
+                                    <span className="text-gray-500 dark:text-slate-400">Total Questions</span>
+                                    <span className="font-medium text-gray-900 dark:text-slate-100">{questions.length}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-gray-200 dark:border-slate-700 pb-4">
+                                    <span className="text-gray-500 dark:text-slate-400">Total Points</span>
+                                    <span className="font-medium text-gray-900 dark:text-slate-100">
+                                        {questions.reduce((acc, q) => acc + (q.points || 0), 0)}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-gray-500">Total Points</span>
-                                    <span className="font-medium text-gray-900">
-                                        {questions.reduce((acc, q) => acc + (q.points || 0), 0)}
+                                    <span className="text-gray-500 dark:text-slate-400">Security Threshold</span>
+                                    <span className="font-bold text-red-600 dark:text-red-400 uppercase tracking-tighter">
+                                        {examData.proctoringConfig.violationThreshold} VIOLATIONS ALLOWED
                                     </span>
                                 </div>
                             </div>
@@ -547,15 +584,20 @@ export default function CreateExam() {
                                 <Button variant="outline" onClick={() => setStep(2)} className="gap-2" disabled={loading}>
                                     <ArrowLeft className="h-4 w-4" /> Back to Questions
                                 </Button>
-                                <Button onClick={handlePublish} className="gap-2 bg-success hover:bg-green-600" disabled={loading}>
+                                <Button
+                                    variant="success"
+                                    onClick={handlePublish}
+                                    className="gap-2 px-10 py-4 text-sm font-black hover:scale-105 transition-all shadow-2xl shadow-emerald-500/40"
+                                    disabled={loading}
+                                >
                                     {loading ? (
                                         <>
-                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                                             Publishing...
                                         </>
                                     ) : (
                                         <>
-                                            <CheckCircle2 className="h-4 w-4" /> Publish Exam
+                                            <CheckCircle2 className="h-5 w-5" /> Publish Exam
                                         </>
                                     )}
                                 </Button>

@@ -94,10 +94,10 @@ export default function UserManagementPage() {
         <div className="space-y-8">
             <header className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 flex items-center gap-2">
                         <Users className="h-6 w-6 text-primary" /> User Management
                     </h1>
-                    <p className="text-gray-500">Manage students, teachers, and system administrators.</p>
+                    <p className="text-gray-500 dark:text-slate-400">Manage students, teachers, and system administrators.</p>
                 </div>
                 <div className="flex gap-2">
                     <Button variant="outline" onClick={() => setShowHierarchyModal(true)}>
@@ -132,10 +132,10 @@ export default function UserManagementPage() {
 
             {/* Hierarchy Modal */}
             {showHierarchyModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full p-6 animate-in fade-in zoom-in duration-200 h-[80vh] flex flex-col">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-4xl w-full p-6 animate-in fade-in zoom-in duration-200 h-[80vh] flex flex-col border border-gray-200 dark:border-slate-800">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold flex items-center gap-2">
+                            <h3 className="text-xl font-bold flex items-center gap-2 text-slate-900 dark:text-slate-100">
                                 <Layers className="text-primary h-6 w-6" />
                                 Manage Hierarchy
                             </h3>
@@ -147,18 +147,18 @@ export default function UserManagementPage() {
                         <div className="grid md:grid-cols-2 gap-8 flex-1 overflow-hidden">
                             {/* Create Group */}
                             <div className="flex flex-col h-full">
-                                <h4 className="font-bold text-gray-900 border-b pb-2 mb-4">Groups</h4>
+                                <h4 className="font-bold text-gray-900 dark:text-slate-100 border-b dark:border-slate-800 pb-2 mb-4">Groups</h4>
                                 <form onSubmit={handleCreateGroup} className="space-y-3 mb-6">
                                     <div className="flex gap-2">
-                                        <input name="groupName" required className="flex-1 px-3 py-2 border rounded-lg text-sm" placeholder="New Group Name" />
+                                        <input name="groupName" required className="flex-1 px-3 py-2 border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-sm text-slate-900 dark:text-white" placeholder="New Group Name" />
                                         <Button type="submit" size="sm">Add</Button>
                                     </div>
                                 </form>
 
-                                <div className="flex-1 overflow-y-auto border rounded-lg divide-y bg-gray-50">
+                                <div className="flex-1 overflow-y-auto border dark:border-slate-800 rounded-lg divide-y dark:divide-slate-800 bg-gray-50 dark:bg-slate-950/50">
                                     {groups.map(g => (
-                                        <div key={g._id} className="p-3 text-sm flex justify-between items-center group hover:bg-white transition-colors">
-                                            <span className="font-medium">{g.name}</span>
+                                        <div key={g._id} className="p-3 text-sm flex justify-between items-center group hover:bg-white dark:hover:bg-slate-800 transition-colors">
+                                            <span className="font-medium text-slate-700 dark:text-slate-300">{g.name}</span>
                                             <button
                                                 onClick={() => handleDeleteGroup(g._id, g.name)}
                                                 className="text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -174,31 +174,31 @@ export default function UserManagementPage() {
 
                             {/* Create Subgroup */}
                             <div className="flex flex-col h-full">
-                                <h4 className="font-bold text-gray-900 border-b pb-2 mb-4">Sessions / Subgroups</h4>
-                                <form onSubmit={handleCreateSubgroup} className="space-y-3 mb-6 bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                <h4 className="font-bold text-gray-900 dark:text-slate-100 border-b dark:border-slate-800 pb-2 mb-4">Sessions / Subgroups</h4>
+                                <form onSubmit={handleCreateSubgroup} className="space-y-3 mb-6 bg-gray-50 dark:bg-slate-950/50 p-4 rounded-lg border border-gray-100 dark:border-slate-800">
                                     <div>
-                                        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Parent Group</label>
-                                        <select name="groupId" required className="w-full px-3 py-2 border rounded-lg text-sm">
+                                        <label className="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1">Parent Group</label>
+                                        <select name="groupId" required className="w-full px-3 py-2 border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-sm text-slate-900 dark:text-white">
                                             {groups.map(g => <option key={g._id} value={g._id}>{g.name}</option>)}
                                         </select>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
-                                            <input name="subName" required className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Session Name" />
+                                            <input name="subName" required className="w-full px-3 py-2 border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-sm text-slate-900 dark:text-white" placeholder="Session Name" />
                                         </div>
                                         <div>
-                                            <input name="year" required className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Year (e.g. 2024)" />
+                                            <input name="year" required className="w-full px-3 py-2 border dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg text-sm text-slate-900 dark:text-white" placeholder="Year (e.g. 2024)" />
                                         </div>
                                     </div>
                                     <Button type="submit" className="w-full" size="sm">Add Session</Button>
                                 </form>
 
-                                <div className="flex-1 overflow-y-auto border rounded-lg divide-y bg-gray-50">
+                                <div className="flex-1 overflow-y-auto border dark:border-slate-800 rounded-lg divide-y dark:divide-slate-800 bg-gray-50 dark:bg-slate-950/50">
                                     {subgroups.map(s => (
-                                        <div key={s._id} className="p-3 text-sm flex justify-between items-center group hover:bg-white transition-colors">
+                                        <div key={s._id} className="p-3 text-sm flex justify-between items-center group hover:bg-white dark:hover:bg-slate-800 transition-colors">
                                             <div className="flex flex-col">
-                                                <span className="font-medium">{s.name}</span>
-                                                <span className="text-xs text-gray-500">{s.groupId?.name || 'Unknown Group'} • {s.academicYear}</span>
+                                                <span className="font-medium text-slate-700 dark:text-slate-300">{s.name}</span>
+                                                <span className="text-xs text-gray-500 dark:text-slate-500">{s.groupId?.name || 'Unknown Group'} • {s.academicYear}</span>
                                             </div>
                                             <button
                                                 onClick={() => handleDeleteSubgroup(s._id, s.name)}

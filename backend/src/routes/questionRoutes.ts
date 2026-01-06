@@ -6,17 +6,17 @@ import {
     updateQuestion,
     deleteQuestion
 } from '../controllers/questionController';
-import { protect } from '../middleware/authMiddleware';
+import { protect, teacher } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
 router.route('/')
-    .post(protect, createQuestion)
-    .get(protect, getQuestions);
+    .post(protect, teacher, createQuestion)
+    .get(protect, teacher, getQuestions);
 
 router.route('/:id')
-    .get(protect, getQuestionById)
-    .put(protect, updateQuestion)
-    .delete(protect, deleteQuestion);
+    .get(protect, teacher, getQuestionById)
+    .put(protect, teacher, updateQuestion)
+    .delete(protect, teacher, deleteQuestion);
 
 export default router;

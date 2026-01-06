@@ -1,4 +1,5 @@
-FROM node:18-alpine
+# Stage 1: Build the React Application
+FROM node:20-alpine as builder
 
 WORKDIR /app
 
@@ -8,10 +9,24 @@ RUN npm install
 
 COPY . .
 
+# Build time environment variables
+ARG VITE_API_URL=""
+ENV VITE_API_URL=$VITE_API_URL
+
+# Build the app to "dist" folder
 RUN npm run build
 
-# Using a simple server to serve the build or just running dev for now as per user preferences usually
-# For a real deployment we would use Nginx, but for this demo/handoff we'll stick to a node serve or just dev
-EXPOSE 5173
+# Stage 2: Serve with Nginx
+FROM nginx:alpine
 
-CMD ["npm", "run", "dev", "--", "--host"]
+# Copy the build output to Nginx html directory
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy custom Nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port 80
+EXPOSE 80
+
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]

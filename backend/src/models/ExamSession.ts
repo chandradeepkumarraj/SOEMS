@@ -10,6 +10,8 @@ export interface IExamSession extends Document {
     flagged: Map<string, boolean>; // questionId -> boolean
     status: 'in-progress' | 'completed';
     isExpired: boolean;
+    violationCount: number;
+    isSuspended: boolean;
 }
 
 const ExamSessionSchema: Schema = new Schema({
@@ -37,7 +39,9 @@ const ExamSessionSchema: Schema = new Schema({
         enum: ['in-progress', 'completed'],
         default: 'in-progress'
     },
-    isExpired: { type: Boolean, default: false }
+    isExpired: { type: Boolean, default: false },
+    violationCount: { type: Number, default: 0 },
+    isSuspended: { type: Boolean, default: false }
 }, {
     timestamps: true
 });

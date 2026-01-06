@@ -4,6 +4,8 @@ import Subgroup from '../models/Subgroup';
 import User from '../models/User';
 import Exam from '../models/Exam';
 import Result from '../models/Result';
+import ExamSession from '../models/ExamSession';
+import Violation from '../models/Violation';
 
 // @desc    Get all groups
 // @route   GET /api/groups
@@ -91,9 +93,11 @@ export const deleteGroup = async (req: Request, res: Response) => {
         const usersInGroup = await User.find({ groupId: group._id }, '_id');
         const userIds = usersInGroup.map(u => u._id);
 
-        // 3. Delete all results for these students
+        // 3. Delete all results, sessions and violations for these students
         if (userIds.length > 0) {
             await Result.deleteMany({ studentId: { $in: userIds } });
+            await ExamSession.deleteMany({ studentId: { $in: userIds } });
+            await Violation.deleteMany({ studentId: { $in: userIds } });
         }
 
         // 4. Delete all users (students) from this group
@@ -148,9 +152,11 @@ export const deleteSubgroup = async (req: Request, res: Response) => {
         const usersInSubgroup = await User.find({ subgroupId: subgroup._id }, '_id');
         const userIds = usersInSubgroup.map(u => u._id);
 
-        // 2. Delete all results for these students
+        // 2. Delete all results, sessions and violations for these students
         if (userIds.length > 0) {
             await Result.deleteMany({ studentId: { $in: userIds } });
+            await ExamSession.deleteMany({ studentId: { $in: userIds } });
+            await Violation.deleteMany({ studentId: { $in: userIds } });
         }
 
         // 3. Delete all users (students) from this subgroup

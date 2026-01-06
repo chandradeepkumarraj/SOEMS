@@ -16,6 +16,7 @@ export interface IExam extends Document {
         enableTabLock: boolean;
         enableFullscreen: boolean;
         enableInputLock: boolean;
+        violationThreshold: number;
     };
     createdAt: Date;
     updatedAt: Date;
@@ -40,7 +41,8 @@ const ExamSchema: Schema = new Schema({
     proctoringConfig: {
         enableTabLock: { type: Boolean, default: true },
         enableFullscreen: { type: Boolean, default: true },
-        enableInputLock: { type: Boolean, default: true }
+        enableInputLock: { type: Boolean, default: true },
+        violationThreshold: { type: Number, default: 5 }
     }
 }, {
     timestamps: true

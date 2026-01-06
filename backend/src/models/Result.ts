@@ -11,6 +11,7 @@ export interface IResult extends Document {
         isCorrect: boolean;
         timeSpent: number; // in seconds
     }[];
+    isSuspended: boolean;
     submittedAt: Date;
 }
 
@@ -25,6 +26,7 @@ const ResultSchema: Schema = new Schema({
         isCorrect: { type: Boolean, required: true },
         timeSpent: { type: Number, default: 0 }
     }],
+    isSuspended: { type: Boolean, default: false },
     submittedAt: { type: Date, default: Date.now }
 }, {
     timestamps: true

@@ -103,22 +103,22 @@ export default function Dashboard() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.2 }}
-                    className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm flex flex-wrap items-center gap-6"
+                    className="bg-[var(--card-bg)] p-4 rounded-xl border border-[var(--border-main)] shadow-[var(--shadow-main)] flex flex-wrap items-center gap-6"
                 >
                     <div className="flex items-center gap-2 text-sm">
-                        <span className="text-gray-500">Roll No:</span>
-                        <span className="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{user.rollNo || 'N/A'}</span>
+                        <span className="text-gray-500 dark:text-slate-500">Roll No:</span>
+                        <span className="font-mono font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded">{user.rollNo || 'N/A'}</span>
                     </div>
                     {user.phoneNumber && (
                         <div className="flex items-center gap-2 text-sm">
-                            <span className="text-gray-500">Phone:</span>
-                            <span className="font-bold text-gray-900">{user.phoneNumber}</span>
+                            <span className="text-gray-500 dark:text-slate-500">Phone:</span>
+                            <span className="font-bold text-gray-900 dark:text-slate-100">{user.phoneNumber}</span>
                         </div>
                     )}
                     {user.group && (
                         <div className="flex items-center gap-2 text-sm">
-                            <span className="text-gray-500">Group:</span>
-                            <span className="font-bold text-gray-900">{user.group.name}</span>
+                            <span className="text-gray-500 dark:text-slate-500">Group:</span>
+                            <span className="font-bold text-gray-900 dark:text-slate-100">{user.group.name}</span>
                         </div>
                     )}
                 </motion.div>
@@ -154,12 +154,12 @@ export default function Dashboard() {
 
             <div className="grid grid-cols-1 gap-8">
                 {/* Next Up Section - Now Full Width */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <div className="bg-[var(--card-bg)] rounded-xl shadow-[var(--shadow-main)] border border-[var(--border-main)] p-6">
+                    <h2 className="text-lg font-bold text-[var(--text-main)] mb-4 flex items-center gap-2">
                         <Clock className="h-5 w-5 text-orange-500" /> Up Next
                     </h2>
                     {loading ? (
-                        <div className="h-32 bg-gray-50 rounded-lg animate-pulse" />
+                        <div className="h-32 bg-gray-50 dark:bg-slate-800 rounded-lg animate-pulse" />
                     ) : nextExam ? (
                         <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6 text-white relative overflow-hidden group">
                             <div className="relative z-10 w-full max-w-2xl">
@@ -198,7 +198,7 @@ export default function Dashboard() {
                             </div>
                         </div>
                     ) : (
-                        <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                        <div className="text-center py-8 text-slate-500 dark:text-slate-500 bg-[var(--bg-main)] rounded-lg border border-dashed border-[var(--border-main)]">
                             <p>No upcoming exams scheduled.</p>
                             <Button variant="ghost" className="mt-2 text-primary" onClick={() => navigate('/student/exams')}>
                                 Browse All Exams
@@ -213,16 +213,16 @@ export default function Dashboard() {
 
 function StatCard({ label, value, icon: Icon, color, bg, trend }: any) {
     return (
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+        <div className="bg-[var(--card-bg)] p-6 rounded-xl shadow-[var(--shadow-main)] border border-[var(--border-main)] transition-all duration-300">
             <div className="flex items-center justify-between mb-4">
-                <div className={`p-3 rounded-xl ${bg} ${color}`}>
+                <div className={`p-3 rounded-xl ${bg} dark:bg-slate-800/50 ${color} dark:text-blue-400`}>
                     <Icon className="h-6 w-6" />
                 </div>
-                {trend && <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">{trend}</span>}
+                {trend && <span className="text-xs font-medium text-green-600 dark:text-green-500 bg-green-50 dark:bg-green-950/30 px-2 py-1 rounded-full">{trend}</span>}
             </div>
             <div>
-                <p className="text-sm text-gray-500 font-medium mb-1">{label}</p>
-                <h3 className="text-2xl font-bold text-gray-900">{value}</h3>
+                <p className="text-sm text-gray-500 dark:text-slate-400 font-medium mb-1">{label}</p>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-slate-100">{value}</h3>
             </div>
         </div>
     );

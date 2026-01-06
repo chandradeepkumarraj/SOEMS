@@ -6,6 +6,9 @@ import csv from 'csv-parser';
 import fs from 'fs';
 import { z } from 'zod';
 import mongoose from 'mongoose';
+import Result from '../models/Result';
+import ExamSession from '../models/ExamSession';
+import Violation from '../models/Violation';
 
 // @desc    Get all users
 // @route   GET /api/admin/users
@@ -73,8 +76,13 @@ export const deleteUser = async (req: Request, res: Response) => {
         const user = await User.findById(req.params.id);
 
         if (user) {
+            // Cascade: Delete associated data
+            await Result.deleteMany({ studentId: user._id });
+            await ExamSession.deleteMany({ studentId: user._id });
+            await Violation.deleteMany({ studentId: user._id });
+
             await user.deleteOne();
-            res.json({ message: 'User removed' });
+            res.json({ message: 'User and all associated data removed' });
         } else {
             res.status(404).json({ message: 'User not found' });
         }

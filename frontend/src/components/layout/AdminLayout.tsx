@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Shield, Activity, LogOut, Menu, X, Settings, Users } from 'lucide-react';
+import { Shield, Activity, LogOut, Menu, X, Settings, Users, Moon, Sun } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { useTheme } from '../../context/ThemeContext';
 import { getCurrentUser } from '../../services/authService';
 
 export default function AdminLayout() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
     const [user, setUser] = useState<any>(null);
+    const { theme, toggleTheme } = useTheme();
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -29,16 +32,22 @@ export default function AdminLayout() {
     const isActive = (path: string) => location.pathname === path;
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+        <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] flex flex-col md:flex-row theme-transition">
             {/* Mobile Header */}
-            <header className="md:hidden bg-gray-900 text-white p-4 flex items-center justify-between sticky top-0 z-20">
+            <header className="md:hidden bg-gray-900 shadow-xl text-white p-4 flex items-center justify-between sticky top-0 z-20">
                 <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="sm" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-white hover:bg-gray-800">
+                    <Button variant="ghost" size="sm" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-[var(--text-main)] hover:bg-[var(--bg-main)]">
                         {isSidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                     </Button>
                     <span className="text-xl font-bold">Admin Portal</span>
                 </div>
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={toggleTheme}
+                        className="p-2 text-white hover:bg-gray-800 rounded-full transition-colors"
+                    >
+                        {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+                    </button>
                     {user?.name && (
                         <div className="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold">
                             {user.name.charAt(0)}
@@ -48,10 +57,23 @@ export default function AdminLayout() {
             </header>
 
             {/* Sidebar */}
-            <aside className={`fixed inset-y-0 left-0 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 z-30 w-64 bg-gray-900 text-white transition-transform duration-200 ease-in-out flex flex-col shadow-xl`}>
-                <div className="p-6 border-b border-gray-800 hidden md:flex items-center gap-3">
-                    <Shield className="h-8 w-8 text-primary" />
-                    <span className="text-xl font-bold">Admin Panel</span>
+            <aside
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+                className={`fixed inset-y-0 left-0 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 z-30 ${isHovered ? 'md:w-64' : 'md:w-20'} bg-gray-900 text-white transition-all duration-300 ease-in-out flex flex-col shadow-xl overflow-hidden`}
+            >
+                <div className={`p-6 border-b border-gray-800 hidden md:flex items-center gap-3 whitespace-nowrap`}>
+                    <Shield className="h-8 w-8 text-primary shrink-0" />
+                    <span className={`text-xl font-bold transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>Admin Panel</span>
+                    {isHovered && (
+                        <button
+                            onClick={toggleTheme}
+                            className="ml-auto p-2 text-gray-400 hover:text-white rounded-full transition-all"
+                            title={theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+                        >
+                            {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                        </button>
+                    )}
                 </div>
 
                 <nav className="flex-1 p-4 space-y-1 mt-4">
@@ -62,34 +84,38 @@ export default function AdminLayout() {
                                 key={item.name}
                                 to={item.href}
                                 onClick={() => setIsSidebarOpen(false)}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${active
+                                className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${active
                                     ? 'bg-primary text-white shadow-lg'
                                     : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                                     }`}
                             >
-                                <item.icon className={`h-5 w-5 ${active ? 'text-white' : 'text-gray-500'}`} />
-                                {item.name}
+                                <item.icon className={`h-5 w-5 shrink-0 ${active ? 'text-white' : 'text-gray-500'}`} />
+                                <span className={`transition-opacity duration-300 ${isHovered || isSidebarOpen ? 'opacity-100' : 'md:opacity-0'}`}>
+                                    {item.name}
+                                </span>
                             </Link>
                         );
                     })}
                 </nav>
 
-                <div className="p-4 border-t border-gray-800">
-                    <div className="flex items-center gap-3 mb-6 px-4">
-                        <div className="h-10 w-10 rounded-full bg-gray-800 flex items-center justify-center text-primary font-bold">
+                <div className="p-4 border-t border-gray-800 overflow-hidden">
+                    <div className="flex items-center gap-3 mb-6 px-4 whitespace-nowrap">
+                        <div className="h-10 w-10 rounded-full bg-gray-800 flex items-center justify-center text-primary font-bold shrink-0">
                             {user?.name?.charAt(0) || 'A'}
                         </div>
-                        <div className="overflow-hidden">
+                        <div className={`overflow-hidden transition-opacity duration-300 ${isHovered || isSidebarOpen ? 'opacity-100' : 'md:opacity-0'}`}>
                             <p className="text-sm font-medium truncate">{user?.name || 'Administrator'}</p>
                             <p className="text-xs text-gray-500 truncate">Super User</p>
                         </div>
                     </div>
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium text-gray-400 hover:bg-red-500/10 hover:text-red-500 transition-colors"
+                        className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium text-gray-400 hover:bg-red-500/10 hover:text-red-500 transition-colors whitespace-nowrap"
                     >
-                        <LogOut className="h-5 w-5" />
-                        Sign Out
+                        <LogOut className="h-5 w-5 shrink-0" />
+                        <span className={`transition-opacity duration-300 ${isHovered || isSidebarOpen ? 'opacity-100' : 'md:opacity-0'}`}>
+                            Sign Out
+                        </span>
                     </button>
                 </div>
             </aside>
@@ -103,7 +129,7 @@ export default function AdminLayout() {
             )}
 
             {/* Main Content Area */}
-            <main className="flex-1 w-full overflow-x-hidden overflow-y-auto bg-gray-50 p-4 md:p-8">
+            <main className="flex-1 w-full overflow-x-hidden overflow-y-auto bg-transparent p-4 md:p-8">
                 <div className="max-w-7xl mx-auto">
                     <Outlet context={{ user }} />
                 </div>

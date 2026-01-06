@@ -1,11 +1,9 @@
-import React from 'react';
 import { Button } from '../components/ui/Button';
-import { ArrowLeft, Mic, Video, Monitor, AlertTriangle, Shield, MessageSquare, Ban, Flag } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { ArrowLeft, Mic, Video, Monitor, Shield, MessageSquare, Ban, Flag } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function ProctorDetail() {
-    const { studentId } = useParams();
+
 
     // Mock Data
     const student = {
@@ -136,11 +134,11 @@ export default function ProctorDetail() {
                             {events.map((event) => (
                                 <div key={event.id} className="relative pl-4 border-l-2 border-gray-700 pb-4 last:pb-0">
                                     <div className={`absolute -left-[5px] top-0 h-2.5 w-2.5 rounded-full ${event.type === 'High Alert' ? 'bg-red-500' :
-                                            event.type === 'Info' ? 'bg-blue-500' : 'bg-green-500'
+                                        event.type === 'Info' ? 'bg-blue-500' : 'bg-green-500'
                                         }`} />
                                     <div className="flex justify-between items-start mb-1">
                                         <span className={`text-xs font-bold px-2 py-0.5 rounded ${event.type === 'High Alert' ? 'bg-red-500/20 text-red-400' :
-                                                event.type === 'Info' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'
+                                            event.type === 'Info' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'
                                             }`}>
                                             {event.type}
                                         </span>

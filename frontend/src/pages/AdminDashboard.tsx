@@ -32,10 +32,10 @@ export default function AdminDashboard() {
         <div className="space-y-8">
             <header className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                         Admin Dashboard
                     </h1>
-                    <p className="text-gray-500">Overview of system health and key metrics.</p>
+                    <p className="text-gray-500 dark:text-slate-400">Overview of system health and key metrics.</p>
                 </div>
             </header>
 
@@ -47,22 +47,22 @@ export default function AdminDashboard() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
-                        className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"
+                        className="bg-[var(--card-bg)] p-6 rounded-2xl shadow-[var(--shadow-main)] border-2 border-[var(--border-main)] transition-all duration-300"
                     >
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-gray-500 font-medium">{stat.label}</h3>
-                            <div className={`p-2 rounded-lg ${stat.color} bg-opacity-10 text-${stat.color.replace('bg-', '')}`}>
+                            <h3 className="text-slate-900 dark:text-slate-100 font-black uppercase tracking-widest text-[10px]">{stat.label}</h3>
+                            <div className={`p-2 rounded-lg ${stat.color} bg-opacity-20 text-${stat.color.replace('bg-', '')}`}>
                                 <stat.icon className={`h-5 w-5 ${stat.color.replace('bg-', 'text-')}`} />
                             </div>
                         </div>
-                        <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                        <p className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">{stat.value}</p>
                     </motion.div>
                 ))}
             </div>
 
             {/* Content Area */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 min-h-[400px]">
-                <h2 className="text-lg font-bold mb-4">System Status</h2>
+            <div className="bg-[var(--card-bg)] rounded-2xl shadow-[var(--shadow-main)] border border-[var(--border-main)] p-8 min-h-[400px]">
+                <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-8 text-encaved">System Status</h2>
                 <SystemHealth />
             </div>
         </div>

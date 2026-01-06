@@ -81,11 +81,11 @@ export default function Profile() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">
-                        {activeTab === 'profile' ? 'My Profile' : 'System Settings'}
+                    <h1 className="text-2xl font-black text-slate-900 tracking-tight uppercase">
+                        {activeTab === 'profile' ? 'Security Identity' : 'System Control Console'}
                     </h1>
-                    <p className="text-gray-500">
-                        {activeTab === 'profile' ? 'Manage your account settings and preferences.' : 'Configure global system settings.'}
+                    <p className="text-slate-900 font-bold italic">
+                        {activeTab === 'profile' ? 'Manage your scholarly credentials and access protocols.' : 'Configure industrial-grade examination environments.'}
                     </p>
                 </div>
                 {activeTab === 'profile' && (
@@ -102,18 +102,18 @@ export default function Profile() {
 
             {/* Tabs for Admin */}
             {isAdmin && (
-                <div className="flex space-x-1 bg-gray-100/50 p-1 rounded-lg w-fit">
+                <div className="flex space-x-1 bg-[var(--bg-main)] p-1 rounded-lg w-fit transition-colors">
                     <button
                         onClick={() => setActiveTab('profile')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'profile' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'profile' ? 'bg-primary text-white shadow-lg' : 'text-[var(--text-main)] hover:bg-[var(--card-bg)] hover:shadow-sm'}`}
                     >
-                        <User className="h-4 w-4" /> Profile
+                        <User className="h-4 w-4" /> Identity
                     </button>
                     <button
                         onClick={() => setActiveTab('settings')}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'settings' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'settings' ? 'bg-primary text-white shadow-lg' : 'text-[var(--text-main)] hover:bg-[var(--card-bg)] hover:shadow-sm'}`}
                     >
-                        <Settings className="h-4 w-4" /> Settings
+                        <Settings className="h-4 w-4" /> Protocols
                     </button>
                 </div>
             )}
@@ -132,26 +132,26 @@ export default function Profile() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Left Column: Avatar & Summary */}
                     <div className="lg:col-span-1 space-y-6">
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 text-center">
+                        <div className="bg-[var(--card-bg)] p-6 rounded-xl shadow-[var(--shadow-main)] border border-[var(--border-main)] text-center transition-all duration-300">
                             <div className="relative inline-block mb-4">
-                                <div className="h-32 w-32 rounded-full bg-primary/10 flex items-center justify-center border-4 border-gray-50 shadow-inner">
+                                <div className="h-32 w-32 rounded-full bg-primary/10 flex items-center justify-center border-4 border-gray-50 dark:border-slate-800 shadow-inner">
                                     <User className="h-16 w-16 text-primary/40" />
                                 </div>
                             </div>
-                            <h2 className="text-xl font-bold text-gray-900">{formData.name}</h2>
-                            <p className="text-gray-500 capitalize">{formData.role}</p>
+                            <h2 className="text-xl font-black text-[var(--text-main)] uppercase tracking-tight">{formData.name}</h2>
+                            <p className="text-[var(--text-main)] font-black uppercase tracking-[0.2em] text-[10px] bg-[var(--bg-main)] py-1 rounded-full mt-2 border border-[var(--border-main)]">{formData.role}</p>
                         </div>
 
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                            <h3 className="font-bold text-gray-900 mb-4">Account Summary</h3>
+                        <div className="bg-[var(--card-bg)] p-6 rounded-xl shadow-[var(--shadow-main)] border border-[var(--border-main)] transition-all">
+                            <h3 className="font-bold text-[var(--text-main)] mb-4">Account Summary</h3>
                             <div className="space-y-3 text-sm">
-                                <div className="flex justify-between py-2 border-b border-gray-50">
-                                    <span className="text-gray-500">Member Since</span>
-                                    <span className="font-medium text-gray-900">{new Date(formData.createdAt || Date.now()).toLocaleDateString()}</span>
+                                <div className="flex justify-between py-2.5 border-b border-slate-100 dark:border-slate-800">
+                                    <span className="text-slate-900 dark:text-slate-400 font-black uppercase tracking-widest text-[9px]">Enrolled Since</span>
+                                    <span className="font-black text-slate-900 dark:text-slate-100 text-xs">{new Date(formData.createdAt || Date.now()).toLocaleDateString()}</span>
                                 </div>
-                                <div className="flex justify-between py-2 border-b border-gray-50">
-                                    <span className="text-gray-500">Status</span>
-                                    <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-bold">Active</span>
+                                <div className="flex justify-between py-2.5 border-b border-slate-100 dark:border-slate-800">
+                                    <span className="text-slate-900 dark:text-slate-400 font-black uppercase tracking-widest text-[9px]">Session Status</span>
+                                    <span className="px-2 py-0.5 rounded bg-green-500 text-white text-[9px] font-black uppercase">Active</span>
                                 </div>
                                 {formData.rollNo && (
                                     <div className="flex justify-between py-2 border-b border-gray-50">
@@ -183,10 +183,10 @@ export default function Profile() {
 
                     {/* Right Column: Form */}
                     <div className="lg:col-span-2">
-                        <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <form onSubmit={handleSubmit} className="bg-[var(--card-bg)] p-6 rounded-xl shadow-[var(--shadow-main)] border border-[var(--border-main)] transition-all">
                             <div className="space-y-6">
-                                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                                    <User className="h-5 w-5 text-gray-400" /> Personal Information
+                                <h3 className="text-lg font-black text-slate-900 dark:text-slate-100 flex items-center gap-2 uppercase tracking-tighter">
+                                    <User className="h-5 w-5 text-primary" /> Personal Information
                                 </h3>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -231,13 +231,13 @@ export default function Profile() {
                                         icon={BookOpen}
                                     />
                                     <div className="md:col-span-2">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Professional Bio</label>
+                                        <label className="block text-xs font-black text-slate-900 dark:text-slate-100 uppercase tracking-widest mb-2">Professional Biography</label>
                                         <textarea
                                             name="bio"
                                             value={formData.bio || ''}
                                             onChange={handleChange}
                                             disabled={!isEditing || formData.role === 'student'}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-gray-50 disabled:text-gray-500 transition-colors h-24"
+                                            className="w-full px-4 py-3 border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-900 dark:disabled:text-slate-400 font-bold transition-all h-32 text-sm"
                                             placeholder="Write a short bio about your expertise..."
                                         />
                                     </div>
@@ -277,16 +277,16 @@ export default function Profile() {
                     className="space-y-6"
                 >
                     {/* Global Questions Configuration */}
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-6">
-                            <Settings className="h-5 w-5 text-gray-400" /> Questions Configuration
+                    <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800">
+                        <h3 className="text-lg font-black text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-6 uppercase tracking-tighter">
+                            <Settings className="h-5 w-5 text-primary" /> System Protocols
                         </h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-4">
                                 <label className="block">
-                                    <span className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-1">
-                                        <Clock className="h-4 w-4 text-gray-400" /> Default Exam Duration (mins)
+                                    <span className="text-[10px] font-black text-slate-900 dark:text-slate-100 uppercase tracking-[0.2em] flex items-center gap-2 mb-2">
+                                        <Clock className="h-4 w-4 text-primary" /> Default Exam Duration (mins)
                                     </span>
                                     <input
                                         type="number"
@@ -354,14 +354,14 @@ export default function Profile() {
                     </div>
 
                     {/* System Maintenance */}
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-4">
+                    <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800">
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100 flex items-center gap-2 mb-4">
                             <AlertTriangle className="h-5 w-5 text-orange-500" /> System Params
                         </h3>
-                        <div className="flex items-center justify-between p-4 bg-orange-50 rounded-lg border border-orange-100">
+                        <div className="flex items-center justify-between p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-100 dark:border-orange-800">
                             <div>
-                                <h4 className="font-medium text-orange-900">Maintenance Mode</h4>
-                                <p className="text-sm text-orange-700 mt-1">Prevents non-admin users from logging in.</p>
+                                <h4 className="font-medium text-orange-900 dark:text-orange-200">Maintenance Mode</h4>
+                                <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">Prevents non-admin users from logging in.</p>
                             </div>
                             <button
                                 onClick={() => setAdminSettings({ ...adminSettings, maintenanceMode: !adminSettings.maintenanceMode })}
@@ -386,7 +386,7 @@ export default function Profile() {
 function InputField({ label, name, value, onChange, disabled, icon: Icon, type = "text" }: any) {
     return (
         <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">{label}</label>
             <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Icon className="h-4 w-4 text-gray-400" />
@@ -397,7 +397,7 @@ function InputField({ label, name, value, onChange, disabled, icon: Icon, type =
                     value={value}
                     onChange={onChange}
                     disabled={disabled}
-                    className="pl-10 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-gray-50 disabled:text-gray-500 transition-colors"
+                    className="pl-10 block w-full px-4 py-3 border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary disabled:bg-slate-100 dark:disabled:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold transition-all text-sm"
                 />
             </div>
         </div>

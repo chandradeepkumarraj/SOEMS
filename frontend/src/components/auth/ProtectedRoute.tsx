@@ -18,6 +18,7 @@ const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
         // Redirect based on role to their respective dashboard
         if (user.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
         if (user.role === 'teacher') return <Navigate to="/teacher/dashboard" replace />;
+        if (user.role === 'proctor') return <Navigate to="/proctor/dashboard" replace />;
         if (user.role === 'student') return <Navigate to="/dashboard" replace />;
 
         // Fallback

@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import { z } from 'zod';
-import fs from 'fs';
 import bcrypt from 'bcryptjs';
 
 // Generate JWT Token
@@ -10,62 +9,6 @@ const generateToken = (id: string) => {
     return jwt.sign({ id }, process.env.JWT_SECRET || 'secret', {
         expiresIn: '30d',
     });
-};
-
-// @desc    Register a new user
-// @route   POST /api/auth/register
-// @access  Public
-export const registerUser = async (req: Request, res: Response) => {
-    const schema = z.object({
-        name: z.string().min(2),
-        email: z.string().email(),
-        password: z.string().min(6),
-        role: z.enum(['student', 'teacher', 'admin', 'proctor']).optional(),
-        institution: z.string().optional(),
-    });
-
-    const validation = schema.safeParse(req.body);
-
-    if (!validation.success) {
-        return res.status(400).json({ message: 'Invalid input', errors: validation.error.errors });
-    }
-
-    const { name, email, password, role, institution } = req.body;
-
-    try {
-        const userExists = await User.findOne({ email });
-
-        if (userExists) {
-            return res.status(400).json({ message: 'User already exists' });
-        }
-
-        const user = await User.create({
-            name,
-            email,
-            password,
-            role: role || 'student',
-            institution
-        });
-
-        if (user) {
-            res.status(201).json({
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                token: generateToken(user._id.toString()),
-            });
-        } else {
-            res.status(400).json({ message: 'Invalid user data' });
-        }
-    } catch (error: any) {
-        try {
-            fs.appendFileSync('error_log.txt', `Register Error: ${error.message}\nStack: ${error.stack}\n`);
-        } catch (e) {
-            console.error('Failed to write to error log:', e);
-        }
-        res.status(500).json({ message: error.message });
-    }
 };
 
 // @desc    Auth user & get token

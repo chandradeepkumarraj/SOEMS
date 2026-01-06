@@ -95,8 +95,8 @@ export default function MyExams() {
         <>
             <header className="flex justify-between items-center mb-8">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">My Exams</h1>
-                    <p className="text-gray-500">Manage your exams and view reports.</p>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Exams</h1>
+                    <p className="text-gray-500 dark:text-slate-400">Manage your exams and view reports.</p>
                 </div>
                 <Link to="/teacher/create-exam">
                     <Button>
@@ -105,23 +105,23 @@ export default function MyExams() {
                 </Link>
             </header>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                    <h2 className="text-lg font-bold text-gray-900">All Exams</h2>
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden">
+                <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center">
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">All Exams</h2>
                     <div className="relative">
-                        <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
                         <input
                             type="text"
                             placeholder="Search exams..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary w-64"
+                            className="pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary w-64"
                         />
                     </div>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
-                        <thead className="bg-gray-50 text-gray-500 text-sm">
+                        <thead className="bg-gray-50 dark:bg-slate-800/50 text-gray-500 dark:text-slate-400 text-sm">
                             <tr>
                                 <th className="px-6 py-4 font-medium">Exam Title</th>
                                 <th className="px-6 py-4 font-medium">Date</th>
@@ -129,27 +129,28 @@ export default function MyExams() {
                                 <th className="px-6 py-4 font-medium text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
                             {loading ? (
                                 <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-500">Loading...</td></tr>
                             ) : filteredExams.length === 0 ? (
                                 <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-500">No exams found.</td></tr>
                             ) : (
                                 filteredExams.map((exam) => (
-                                    <tr key={exam._id} className="hover:bg-gray-50/50 transition-colors">
+                                    <tr key={exam._id} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/30 transition-colors">
                                         <td className="px-6 py-4">
-                                            <div className="font-medium text-gray-900">{exam.title}</div>
-                                            <div className="text-xs text-gray-500">ID: #{exam._id.slice(-4)}</div>
+                                            <div className="font-medium text-gray-900 dark:text-slate-100">{exam.title}</div>
+                                            <div className="text-xs text-gray-500 dark:text-slate-500">ID: #{exam._id.slice(-4)}</div>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-500">
+                                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-slate-400">
                                             {new Date(exam.startTime).toLocaleDateString()}
                                             <br />
                                             <span className="text-xs">{new Date(exam.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
-                                                ${exam.status === 'published' ? 'bg-green-100 text-green-800' :
-                                                    exam.status === 'draft' ? 'bg-gray-100 text-gray-800' : 'bg-blue-100 text-blue-800'}`}>
+                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${exam.status === 'published'
+                                                ? 'bg-success/10 text-success border-success/30 shadow-sm shadow-success/10' :
+                                                exam.status === 'draft' ? 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-400 border-slate-200' :
+                                                    'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200'}`}>
                                                 {exam.status}
                                             </span>
                                         </td>
@@ -158,7 +159,7 @@ export default function MyExams() {
                                                 {exam.status === 'published' && (
                                                     <button
                                                         onClick={() => handleEndExam(exam._id)}
-                                                        className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-error"
+                                                        className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg text-gray-400 dark:text-slate-500 hover:text-error"
                                                         title="Stop Exam Manually"
                                                     >
                                                         <StopCircle className="h-4 w-4" />
@@ -166,24 +167,24 @@ export default function MyExams() {
                                                 )}
                                                 <button
                                                     onClick={() => handleDownloadReport(exam._id, exam.title)}
-                                                    className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-green-600"
+                                                    className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg text-gray-400 dark:text-slate-500 hover:text-green-600"
                                                     title="Download Report"
                                                 >
                                                     <Download className="h-4 w-4" />
                                                 </button>
                                                 <Link to={`/teacher/analytics/${exam._id}`}>
-                                                    <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-primary" title="Analytics">
+                                                    <button className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg text-gray-400 dark:text-slate-500 hover:text-primary" title="Analytics">
                                                         <BarChart3 className="h-4 w-4" />
                                                     </button>
                                                 </Link>
                                                 <Link to={`/teacher/create-exam?edit=${exam._id}`}>
-                                                    <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-blue-600" title="Edit">
+                                                    <button className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg text-gray-400 dark:text-slate-500 hover:text-blue-600" title="Edit">
                                                         <Pencil className="h-4 w-4" />
                                                     </button>
                                                 </Link>
                                                 <button
                                                     onClick={() => handleDelete(exam._id)}
-                                                    className="p-2 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-600"
+                                                    className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-gray-400 dark:text-slate-500 hover:text-red-600"
                                                     title="Delete"
                                                 >
                                                     <Trash2 className="h-4 w-4" />

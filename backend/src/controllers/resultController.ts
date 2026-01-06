@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
 import Result from '../models/Result';
+import { AuthRequest } from '../middleware/authMiddleware';
 
 // @desc    Get all results for the logged-in student
 // @route   GET /api/results/my-results
 // @access  Private (Student)
-export const getMyResults = async (req: any, res: Response) => {
+export const getMyResults = async (req: AuthRequest, res: Response) => {
     try {
         const results = await Result.find({ studentId: req.user._id })
             .populate('examId', 'title startTime duration')
@@ -32,13 +33,17 @@ export const getResultsByExam = async (req: Request, res: Response) => {
 // @desc    Get specific result by ID
 // @route   GET /api/results/:id
 // @access  Private
-export const getResultById = async (req: Request, res: Response) => {
+export const getResultById = async (req: AuthRequest, res: Response) => {
     try {
         const result = await Result.findById(req.params.id)
-            .populate('examId', 'title description totalQuestions') // Assuming totalQuestions or details needed
+            .populate('examId', 'title description totalQuestions')
             .populate('answers.questionId', 'text options correctAnswer');
 
         if (result) {
+            // Authorization Check
+            if (req.user.role === 'student' && result.studentId.toString() !== req.user._id.toString()) {
+                return res.status(403).json({ message: 'Not authorized to view this result' });
+            }
             res.json(result);
         } else {
             res.status(404).json({ message: 'Result not found' });
@@ -50,7 +55,7 @@ export const getResultById = async (req: Request, res: Response) => {
 // @desc    Get detailed analysis for a specific result
 // @route   GET /api/results/:id/analysis
 // @access  Private
-export const getResultAnalysis = async (req: any, res: Response) => {
+export const getResultAnalysis = async (req: AuthRequest, res: Response) => {
     try {
         const result = await Result.findById(req.params.id)
             .populate('examId', 'title status')
@@ -58,6 +63,11 @@ export const getResultAnalysis = async (req: any, res: Response) => {
 
         if (!result) {
             return res.status(404).json({ message: 'Result not found' });
+        }
+
+        // Authorization Check
+        if (req.user.role === 'student' && result.studentId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Not authorized to view this analysis' });
         }
 
         // 1. Topic-wise Performance

@@ -1,6 +1,6 @@
 import express from 'express';
 import { getGroups, createGroup, getSubgroups, createSubgroup, deleteGroup, deleteSubgroup } from '../controllers/groupController';
-import { protect, admin } from '../middleware/authMiddleware';
+import { protect, teacher, admin } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
@@ -8,13 +8,13 @@ const router = express.Router();
 router.use(protect);
 
 router.route('/')
-    .get(getGroups)
+    .get(teacher, getGroups)
     .post(admin, createGroup);
 
 router.delete('/:id', admin, deleteGroup);
 
 router.route('/subgroups')
-    .get(getSubgroups)
+    .get(teacher, getSubgroups)
     .post(admin, createSubgroup);
 
 router.delete('/subgroups/:id', admin, deleteSubgroup);

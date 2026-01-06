@@ -1,17 +1,20 @@
 import { Request, Response } from 'express';
+import { Parser } from 'json2csv';
 import Exam from '../models/Exam';
 import Result from '../models/Result';
 import Question from '../models/Question';
 import ExamSession from '../models/ExamSession';
 import User from '../models/User';
+import Violation from '../models/Violation';
 import { getIO } from '../socket';
+import { AuthRequest } from '../middleware/authMiddleware';
 
-// ... (existing imports and functions)
+
 
 // @desc    Submit exam and calculate score
 // @route   POST /api/exams/:id/submit
 // @access  Private (Student)
-export const submitExam = async (req: any, res: Response) => {
+export const submitExam = async (req: AuthRequest, res: Response) => {
     try {
         const { answers } = req.body; // Array of { questionId, selectedOption }
         const examId = req.params.id;
@@ -23,10 +26,18 @@ export const submitExam = async (req: any, res: Response) => {
             return res.status(400).json({ message: 'Exam already submitted' });
         }
 
-        // 2. Fetch Exam and its Questions
-        const exam = await Exam.findById(examId).populate('questions');
+        // 2. Fetch Exam, Questions and Session
+        const [exam, session] = await Promise.all([
+            Exam.findById(examId).populate('questions'),
+            ExamSession.findOne({ studentId, examId, status: 'in-progress' })
+        ]);
+
         if (!exam) {
             return res.status(404).json({ message: 'Exam not found' });
+        }
+
+        if (!session) {
+            return res.status(404).json({ message: 'Active exam session not found.' });
         }
 
         // 3. Calculate Score
@@ -55,20 +66,19 @@ export const submitExam = async (req: any, res: Response) => {
 
         totalPoints = exam.questions.length;
 
-        // 4. Save Result
+        // 4. Save Result (Persisting suspension status if applicable)
         const result = await Result.create({
             studentId,
             examId,
             score,
             totalPoints,
-            answers: processedAnswers
+            answers: processedAnswers,
+            isSuspended: session.isSuspended
         });
 
         // 5. Update and Close Session
-        await ExamSession.findOneAndUpdate(
-            { studentId, examId },
-            { status: 'completed' }
-        );
+        session.status = 'completed';
+        await session.save();
 
         // Notify via Socket
         try {
@@ -87,7 +97,7 @@ export const submitExam = async (req: any, res: Response) => {
 // @desc    Start or resume exam session
 // @route   POST /api/exams/start/:id
 // @access  Private
-export const startExam = async (req: any, res: Response) => {
+export const startExam = async (req: AuthRequest, res: Response) => {
     try {
         const { id: examId } = req.params;
         const studentId = req.user._id;
@@ -103,7 +113,24 @@ export const startExam = async (req: any, res: Response) => {
             return res.status(404).json({ message: 'Exam not found.' });
         }
 
-        // 2. Check if expired
+        // 2. Authorization check: Is student allowed to take this exam?
+        if (req.user.role === 'student') {
+            const isGroupAllowed = !exam.allowedGroups || exam.allowedGroups.length === 0 ||
+                exam.allowedGroups.some(gId => gId.toString() === req.user.groupId?.toString());
+
+            const isSubgroupAllowed = !exam.allowedSubgroups || exam.allowedSubgroups.length === 0 ||
+                exam.allowedSubgroups.some(sId => sId.toString() === req.user.subgroupId?.toString());
+
+            if (!isGroupAllowed || !isSubgroupAllowed) {
+                return res.status(403).json({ message: 'You are not authorized to take this examination.' });
+            }
+
+            if (exam.status !== 'published') {
+                return res.status(400).json({ message: 'This exam is not available for students yet.' });
+            }
+        }
+
+        // 3. Check if expired
         const now = new Date();
         if (now > exam.endTime) {
             return res.status(400).json({ message: 'This exam has expired.' });
@@ -115,6 +142,12 @@ export const startExam = async (req: any, res: Response) => {
         if (session) {
             if (session.status === 'completed') {
                 return res.status(400).json({ message: 'You have already completed this exam.' });
+            }
+            if (session.isSuspended) {
+                return res.status(403).json({
+                    message: 'Your exam session has been suspended due to multiple proctoring violations.',
+                    isSuspended: true
+                });
             }
             return res.json({
                 ...session.toObject(),
@@ -146,28 +179,28 @@ export const startExam = async (req: any, res: Response) => {
 // @desc    Update exam session progress
 // @route   POST /api/exams/progress/:id
 // @access  Private
-export const updateSessionProgress = async (req: any, res: Response) => {
+export const updateSessionProgress = async (req: AuthRequest, res: Response) => {
     try {
         const { id: examId } = req.params;
         const studentId = req.user._id;
         const { answers, timeSpent, flagged } = req.body;
 
-        const session = await ExamSession.findOneAndUpdate(
-            { studentId, examId, status: 'in-progress' },
-            {
-                $set: {
-                    answers: answers || {},
-                    timeSpent: timeSpent || {},
-                    flagged: flagged || {},
-                    lastSyncTime: new Date()
-                }
-            },
-            { new: true }
-        );
+        const session = await ExamSession.findOne({ studentId, examId, status: 'in-progress' });
 
         if (!session) {
             return res.status(404).json({ message: 'Active session not found.' });
         }
+
+        if (session.isSuspended) {
+            return res.status(403).json({ message: 'Session suspended.' });
+        }
+
+        session.answers = answers || session.answers;
+        session.timeSpent = timeSpent || session.timeSpent;
+        session.flagged = flagged || session.flagged;
+        session.lastSyncTime = new Date();
+
+        await session.save();
 
         res.json(session);
     } catch (error: any) {
@@ -175,11 +208,10 @@ export const updateSessionProgress = async (req: any, res: Response) => {
     }
 };
 
-// ... (existing exports)
 
 // @route   POST /api/exams
 // @access  Private (Teacher/Admin)
-export const createExam = async (req: any, res: Response) => {
+export const createExam = async (req: AuthRequest, res: Response) => {
     try {
         const { title, description, questions, duration, startTime, endTime, status, allowedGroups, allowedSubgroups, proctoringConfig } = req.body;
 
@@ -207,7 +239,7 @@ export const createExam = async (req: any, res: Response) => {
 // @desc    Get all exams
 // @route   GET /api/exams
 // @access  Private
-export const getExams = async (req: any, res: Response) => {
+export const getExams = async (req: AuthRequest, res: Response) => {
     try {
         let query: any = {};
 
@@ -239,29 +271,40 @@ export const getExams = async (req: any, res: Response) => {
 
         const exams = await Exam.find(query).populate('creatorId', 'name email').lean();
 
-        // Populate submission count and student status
-        const examsWithStatus = await Promise.all(exams.map(async (exam: any) => {
-            const candidatesCount = await Result.countDocuments({ examId: exam._id });
+        // Efficiently fetch counts and statuses (Optimized to reduce N+1 queries)
+        const examIds = exams.map(e => e._id);
 
+        // Fetch all candidates counts in one go
+        const candidateCounts = await Result.aggregate([
+            { $match: { examId: { $in: examIds } } },
+            { $group: { _id: '$examId', count: { $sum: 1 } } }
+        ]);
+        const countsMap = new Map(candidateCounts.map(c => [c._id.toString(), c.count]));
+
+        let resultsMap = new Map();
+        let sessionsMap = new Map();
+
+        if (req.user && req.user.role === 'student') {
+            const [studentResults, studentSessions] = await Promise.all([
+                Result.find({ studentId: req.user._id, examId: { $in: examIds } }).select('examId').lean(),
+                ExamSession.find({ studentId: req.user._id, examId: { $in: examIds }, status: 'in-progress' }).select('examId').lean()
+            ]);
+            resultsMap = new Map(studentResults.map(r => [r.examId.toString(), true]));
+            sessionsMap = new Map(studentSessions.map(s => [s.examId.toString(), true]));
+        }
+
+        const examsWithStatus = exams.map((exam: any) => {
+            const idStr = exam._id.toString();
             let studentStatus = 'not-started';
-            if (req.user && req.user.role === 'student') {
-                const result = await Result.findOne({ studentId: req.user._id, examId: exam._id });
-                if (result) {
-                    studentStatus = 'completed';
-                } else {
-                    const session = await ExamSession.findOne({ studentId: req.user._id, examId: exam._id });
-                    if (session && session.status === 'in-progress') {
-                        studentStatus = 'in-progress';
-                    }
-                }
-            }
+            if (resultsMap.get(idStr)) studentStatus = 'completed';
+            else if (sessionsMap.get(idStr)) studentStatus = 'in-progress';
 
             return {
                 ...exam,
-                candidatesCount,
+                candidatesCount: countsMap.get(idStr) || 0,
                 studentStatus
             };
-        }));
+        });
 
         res.json(examsWithStatus);
     } catch (error: any) {
@@ -272,7 +315,7 @@ export const getExams = async (req: any, res: Response) => {
 // @desc    Get exam by ID
 // @route   GET /api/exams/:id
 // @access  Private
-export const getExamById = async (req: Request, res: Response) => {
+export const getExamById = async (req: AuthRequest, res: Response) => {
     try {
         const exam = await Exam.findById(req.params.id)
             .populate('questions')
@@ -291,7 +334,7 @@ export const getExamById = async (req: Request, res: Response) => {
 // @desc    Update exam
 // @route   PUT /api/exams/:id
 // @access  Private (Teacher/Admin)
-export const updateExam = async (req: any, res: Response) => {
+export const updateExam = async (req: AuthRequest, res: Response) => {
     try {
         const exam = await Exam.findById(req.params.id);
 
@@ -345,9 +388,10 @@ export const deleteExam = async (req: Request, res: Response) => {
         const exam = await Exam.findById(req.params.id);
 
         if (exam) {
-            // Cascade: Delete Sessions and Results associated with this exam
+            // Cascade: Delete Sessions, Results, and Violations associated with this exam
             await ExamSession.deleteMany({ examId: exam._id });
             await Result.deleteMany({ examId: exam._id });
+            await Violation.deleteMany({ examId: exam._id });
 
             await exam.deleteOne();
             res.json({ message: 'Exam and all associated sessions/results removed' });
@@ -395,7 +439,7 @@ export const endExam = async (req: any, res: Response) => {
 // @desc    Get live exam analytics
 // @route   GET /api/exams/:id/analytics
 // @access  Private (Teacher/Admin)
-export const getExamAnalytics = async (req: any, res: Response) => {
+export const getExamAnalytics = async (req: AuthRequest, res: Response) => {
     try {
         const exam = await Exam.findById(req.params.id);
         if (!exam) {
@@ -564,6 +608,329 @@ export const getExamAnalytics = async (req: any, res: Response) => {
                 accuracy: easiestQuestion.accuracy
             } : null
         });
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+// @desc    Log proctoring violation
+// @route   POST /api/exams/:id/violation
+// @access  Private (Student)
+export const logViolation = async (req: AuthRequest, res: Response) => {
+    try {
+        const { id: examId } = req.params;
+        const studentId = req.user._id;
+        const { type, message } = req.body;
+
+        const [exam, session] = await Promise.all([
+            Exam.findById(examId),
+            ExamSession.findOne({ studentId, examId, status: 'in-progress' })
+        ]);
+
+        if (!exam || !session) {
+            return res.status(404).json({ message: 'Exam session not found.' });
+        }
+
+        if (session.isSuspended) {
+            return res.status(403).json({ message: 'Session already suspended.' });
+        }
+
+        // 1. Create Violation Log
+        await Violation.create({
+            studentId,
+            examId,
+            type,
+            message
+        });
+
+        // 2. Update Session Violation Count
+        session.violationCount += 1;
+
+        // 3. Check for Auto-Suspension
+        const threshold = exam.proctoringConfig?.violationThreshold || 5;
+        if (session.violationCount >= threshold) {
+            session.isSuspended = true;
+
+            // Real-time notification to proctors
+            const io = getIO();
+            io.to(examId).emit('student-suspended', {
+                studentId,
+                examId,
+                studentName: req.user.name,
+                reason: `Reached violation threshold of ${threshold}`
+            });
+            io.to('global-proctor-room').emit('student-suspended', {
+                studentId,
+                examId,
+                studentName: req.user.name,
+                reason: `Reached violation threshold of ${threshold}`
+            });
+        }
+
+        await session.save();
+
+        res.json({
+            violationCount: session.violationCount,
+            isSuspended: session.isSuspended,
+            threshold
+        });
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Resume a suspended student session
+// @route   POST /api/exams/:id/resume/:studentId
+// @access  Private (Teacher/Admin/Proctor)
+export const resumeStudentSession = async (req: AuthRequest, res: Response) => {
+    try {
+        const { id: examId, studentId } = req.params;
+
+        const [exam, session] = await Promise.all([
+            Exam.findById(examId),
+            ExamSession.findOne({ studentId, examId })
+        ]);
+
+        if (!exam || !session) {
+            return res.status(404).json({ message: 'Exam or session not found.' });
+        }
+
+        if (!session.isSuspended && session.status === 'in-progress') {
+            return res.status(400).json({ message: 'Session is not suspended.' });
+        }
+
+        // 1. Delete the auto-submitted result if it exists
+        await Result.findOneAndDelete({ studentId, examId });
+
+        // 2. Reset session state
+        session.isSuspended = false;
+        session.status = 'in-progress';
+
+        // Give the student one more chance if they were at the threshold
+        const threshold = exam.proctoringConfig?.violationThreshold || 5;
+        if (session.violationCount >= threshold) {
+            session.violationCount = threshold - 1;
+        }
+
+        await session.save();
+
+        // 3. Notify student via Socket
+        const io = getIO();
+        io.to(examId).emit('student-unsuspended', {
+            studentId,
+            examId,
+            message: 'Your exam session has been resumed by a proctor.'
+        });
+
+        res.json({ message: 'Session resumed successfully.', session });
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+
+// @desc    Get global proctoring stats
+// @route   GET /api/exams/proctor/global-stats
+// @access  Private (Teacher/Admin/Proctor)
+export const getGlobalProctorStats = async (req: AuthRequest, res: Response) => {
+    try {
+        const [activeCount, violationCount, suspensionCount] = await Promise.all([
+            ExamSession.countDocuments({ status: 'in-progress' }),
+            Violation.countDocuments({}),
+            ExamSession.countDocuments({ isSuspended: true })
+        ]);
+
+        res.json({
+            totalActive: activeCount,
+            totalViolations: violationCount,
+            totalSuspensions: suspensionCount
+        });
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get violations for an exam
+// @route   GET /api/exams/:id/violations
+// @access  Private (Teacher/Admin/Proctor)
+export const getExamViolations = async (req: AuthRequest, res: Response) => {
+    try {
+        const { id: examId } = req.params;
+        let query = examId === 'all' ? {} : { examId };
+
+        const violations = await Violation.find(query)
+            .populate({
+                path: 'studentId',
+                select: 'name rollNo email groupId subgroupId',
+                populate: { path: 'groupId', select: 'name' }
+            })
+            .populate('examId', 'title')
+            .sort({ timestamp: -1 })
+            .limit(500);
+
+        res.json(violations);
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get active sessions for an exam
+// @route   GET /api/exams/:id/active-sessions
+// @access  Private (Teacher/Admin/Proctor)
+export const getActiveSessions = async (req: AuthRequest, res: Response) => {
+    try {
+        const { id: examId } = req.params;
+        let query: any = {
+            $or: [
+                { status: 'in-progress' },
+                { isSuspended: true }
+            ]
+        };
+        if (examId !== 'all') {
+            query.examId = examId;
+        }
+
+        const sessions = await ExamSession.find(query)
+            .populate({
+                path: 'studentId',
+                select: 'name rollNo email groupId',
+                populate: { path: 'groupId', select: 'name' }
+            })
+            .populate('examId', 'title')
+            .lean();
+
+        res.json(sessions);
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get cheating analysis for all exams
+// @route   GET /api/exams/proctor/cheating-analysis
+// @access  Private (Teacher/Admin/Proctor)
+export const getCheatingAnalysis = async (req: AuthRequest, res: Response) => {
+    try {
+        const stats = await Exam.aggregate([
+            {
+                $lookup: {
+                    from: 'examsessions',
+                    localField: '_id',
+                    foreignField: 'examId',
+                    as: 'sessions'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'violations',
+                    localField: '_id',
+                    foreignField: 'examId',
+                    as: 'violations'
+                }
+            },
+            {
+                $project: {
+                    examId: '$_id',
+                    examTitle: '$title',
+                    totalParticipants: { $size: '$sessions' },
+                    activeParticipants: {
+                        $size: {
+                            $filter: {
+                                input: '$sessions',
+                                as: 'session',
+                                cond: { $eq: ['$$session.status', 'in-progress'] }
+                            }
+                        }
+                    },
+                    suspensions: {
+                        $size: {
+                            $filter: {
+                                input: '$sessions',
+                                as: 'session',
+                                cond: { $eq: ['$$session.isSuspended', true] }
+                            }
+                        }
+                    },
+                    totalViolations: { $size: '$violations' },
+                    flaggedStudents: {
+                        $size: { $setUnion: ['$violations.studentId'] }
+                    },
+                    lastIncidentAt: { $max: '$violations.timestamp' }
+                }
+            },
+            { $sort: { lastIncidentAt: -1, totalParticipants: -1 } }
+        ]);
+
+        // Calculate Global Metrics based on real data
+        const globalMetrics = stats.reduce((acc, curr) => ({
+            totalParticipants: acc.totalParticipants + curr.totalParticipants,
+            totalViolations: acc.totalViolations + curr.totalViolations,
+            totalSuspensions: acc.totalSuspensions + curr.suspensions,
+            cleanSessions: acc.cleanSessions + (curr.totalParticipants - curr.flaggedStudents), // Sessions with 0 flagged users
+        }), { totalParticipants: 0, totalViolations: 0, totalSuspensions: 0, cleanSessions: 0 });
+
+        const integrityScore = globalMetrics.totalParticipants > 0
+            ? (globalMetrics.cleanSessions / globalMetrics.totalParticipants) * 100
+            : 100;
+
+        const systemEfficacy = globalMetrics.totalViolations > 0
+            ? (globalMetrics.totalSuspensions / globalMetrics.totalViolations) * 100
+            : 100;
+
+        res.json({
+            exams: stats,
+            global: {
+                totalParticipants: globalMetrics.totalParticipants,
+                totalViolations: globalMetrics.totalViolations,
+                totalSuspensions: globalMetrics.totalSuspensions,
+                integrityScore: Math.round(integrityScore * 10) / 10,
+                systemEfficacy: Math.round(systemEfficacy * 10) / 10
+            }
+        });
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Download cheating report for an exam
+// @route   GET /api/exams/:id/cheating-report
+// @access  Private (Teacher/Admin/Proctor)
+export const downloadCheatingReport = async (req: AuthRequest, res: Response) => {
+    try {
+        const { id: examId } = req.params;
+        const exam = await Exam.findById(examId);
+
+        if (!exam) {
+            return res.status(404).json({ message: 'Exam not found' });
+        }
+
+        const [violations, sessions] = await Promise.all([
+            Violation.find({ examId }).populate('studentId', 'name email rollNo').sort({ timestamp: -1 }).lean(),
+            ExamSession.find({ examId, isSuspended: true }).select('studentId').lean()
+        ]);
+
+        if (violations.length === 0) {
+            return res.status(404).json({ message: 'No violations found for this exam' });
+        }
+
+        const suspendedSet = new Set(sessions.map(s => s.studentId.toString()));
+
+        const data = violations.map((v: any) => ({
+            StudentName: v.studentId?.name || 'Unknown',
+            RollNo: v.studentId?.rollNo || 'N/A',
+            Email: v.studentId?.email || 'N/A',
+            ViolationType: v.type,
+            Message: v.message,
+            Timestamp: new Date(v.timestamp).toLocaleString(),
+            SessionStatus: suspendedSet.has(v.studentId?._id?.toString()) ? 'DISQUALIFIED (SUSPENDED)' : 'ACTIVE/COMPLETED'
+        }));
+
+        const fields = ['StudentName', 'RollNo', 'Email', 'ViolationType', 'Message', 'Timestamp', 'SessionStatus'];
+        const json2csvParser = new Parser({ fields });
+        const csv = json2csvParser.parse(data);
+
+        res.header('Content-Type', 'text/csv');
+        res.attachment(`Cheating_Report_${exam.title.replace(/\s+/g, '_')}.csv`);
+        res.status(200).send(csv);
+
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }

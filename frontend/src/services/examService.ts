@@ -70,3 +70,49 @@ export const getExamAnalytics = async (id: string) => {
     const response = await axios.get(`${API_URL}/${id}/analytics`, { headers: getAuthHeader() });
     return response.data;
 };
+
+export const logViolation = async (id: string, violationData: { type: string, message: string }) => {
+    const response = await axios.post(`${API_URL}/${id}/violation`, violationData, { headers: getAuthHeader() });
+    return response.data;
+};
+
+export const getExamViolations = async (id: string) => {
+    const response = await axios.get(`${API_URL}/${id}/violations`, { headers: getAuthHeader() });
+    return response.data;
+};
+
+export const getGlobalProctorStats = async () => {
+    const response = await axios.get(`${API_URL}/proctor/global-stats`, { headers: getAuthHeader() });
+    return response.data;
+};
+
+export const getActiveSessions = async (id: string) => {
+    const response = await axios.get(`${API_URL}/${id}/active-sessions`, { headers: getAuthHeader() });
+    return response.data;
+};
+
+export const getCheatingAnalysis = async () => {
+    const response = await axios.get(`${API_URL}/proctor/cheating-analysis`, { headers: getAuthHeader() });
+    return response.data;
+};
+
+export const downloadCheatingReport = async (id: string, examTitle: string) => {
+    const response = await axios.get(`${API_URL}/${id}/cheating-report`, {
+        headers: getAuthHeader(),
+        responseType: 'blob'
+    });
+
+    // Create a link and trigger download
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Cheating_Report_${examTitle.replace(/\s+/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+};
+
+export const resumeStudentSession = async (examId: string, studentId: string) => {
+    const response = await axios.post(`${API_URL}/${examId}/resume/${studentId}`, {}, { headers: getAuthHeader() });
+    return response.data;
+};
