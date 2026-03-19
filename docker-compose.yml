@@ -3,48 +3,141 @@ version: '3.8'
 services:
   # Backend API Service
   soems-backend:
-    build: ./backend
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: soems-backend
-    ports:
-      - "5001:5001"
+    restart: always
+    # Ports NOT exposed to host for security; handled by frontend proxy
+    expose:
+      - "5001"
     environment:
       - PORT=5001
-      - MONGO_URI=mongodb://mongo:27017/soems
-      - JWT_SECRET=${JWT_SECRET:-soems_secret_key_change_in_prod}
-      - NODE_ENV=production
-      - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
+      - MONGO_URI=mongodb://${MONGO_USER:-admin}:${MONGO_PASS:-admin_pass}@mongo:27017/soems?authSource=admin
+      - JWT_SECRET=${JWT_SECRET} # Force .env requirement
+      - NODE_ENV=${NODE_ENV:-production}
+      - FRONTEND_URL=${FRONTEND_URL} # Should match the external domain/IP used to access port 443
+      - AI_PROVIDER=${AI_PROVIDER:-ollama}
+      - OLLAMA_URL=http://ollama:11434
+      - AI_MODEL=${AI_MODEL:-llama3}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     volumes:
       - ./backend/uploads:/app/uploads
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
-      - soems-network
+      - frontend-nw
+      - backend-nw
 
   # Frontend Web Service
   soems-frontend:
-    build: ./frontend
+    build: 
+      context: ./frontend
+      args:
+        - VITE_API_URL=/api
+        - VITE_SOCKET_URL=/
     container_name: soems-frontend
+    restart: always
     ports:
       - "80:80"
+      - "443:443"
     depends_on:
-      - soems-backend
+      soems-backend:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
-      - soems-network
+      - frontend-nw
+
+  # Local AI Service (Ollama)
+  ollama:
+    image: ollama/ollama:0.1.32
+    container_name: soems-ollama
+    restart: always
+    volumes:
+      - ollama-models:/root/.ollama
+    # GPU Support (Commented out by default)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+    networks:
+      - backend-nw
 
   # Local MongoDB Database
   mongo:
-    image: mongo:latest
+    image: mongo:6.0
     container_name: soems-mongo
+    restart: always
     ports:
-      - "27017:27017" # Exposed to host for local debugging if needed
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASS:-admin_pass}
     volumes:
       - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--username", "${MONGO_USER:-admin}", "--password", "${MONGO_PASS:-admin_pass}", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
     networks:
-      - soems-network
+      - backend-nw
+
+  # Automate model pulling (Turn-key AI support)
+  ollama-pull-model:
+    image: curlimages/curl:latest
+    container_name: soems-ollama-pull
+    networks:
+      - backend-nw
+    depends_on:
+      - ollama
+    entrypoint: [ "sh", "-c", "echo 'Waiting for Ollama to start...' && sleep 10 && curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"llama3\"}'" ]
 
 networks:
-  soems-network:
+  frontend-nw:
+    driver: bridge
+  backend-nw:
     driver: bridge
 
 volumes:
   mongo-data:
+  ollama-models:
