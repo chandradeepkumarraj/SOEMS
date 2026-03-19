@@ -2,12 +2,15 @@ import { useState, useEffect, useMemo } from 'react';
 import {
     ShieldAlert, Users, Activity, Filter, BarChart2,
     Download, Search, AlertTriangle,
-    UserX, Clock, ExternalLink
+    UserX, Clock, ExternalLink, Camera, MessageSquare
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
-import { getExams, getExamViolations, getActiveSessions, getGlobalProctorStats } from '../../services/examService';
+import { getExams, getExamViolations, getActiveSessions, getGlobalProctorStats, resumeStudentSession } from '../../services/examService';
 import { getSocket } from '../../services/socket';
 import { motion, AnimatePresence } from 'framer-motion';
+import { StatCard } from '../../components/proctor/StatCard';
+import { EmptyState } from '../../components/common/EmptyState';
+import { CandidateCard } from '../../components/proctor/CandidateCard';
 
 export default function ProctorDashboard() {
     const [exams, setExams] = useState<any[]>([]);
@@ -22,6 +25,7 @@ export default function ProctorDashboard() {
     });
     const [liveFeed, setLiveFeed] = useState<any[]>([]);
     const [view, setView] = useState<'monitor' | 'reports'>('monitor');
+    const [examSearch, setExamSearch] = useState('');
 
     const fetchInitialData = async () => {
         try {
@@ -54,11 +58,32 @@ export default function ProctorDashboard() {
         fetchInitialData();
     }, [selectedExamId]);
 
+    const activeExamIds = useMemo(() => {
+        const now = new Date();
+        return exams
+            .filter(e => e.status === 'published' && new Date(e.endTime) > now)
+            .map(e => e._id);
+    }, [exams]);
+
+    const ongoingExams = useMemo(() => {
+        const now = new Date();
+        return exams.filter(e => e.status === 'published' && new Date(e.endTime) > now && e.title.toLowerCase().includes(examSearch.toLowerCase()));
+    }, [exams, examSearch]);
+
+    const historicalExams = useMemo(() => {
+        const now = new Date();
+        return exams.filter(e => (e.status === 'closed' || e.status === 'archived' || (e.status === 'published' && new Date(e.endTime) <= now)) && e.title.toLowerCase().includes(examSearch.toLowerCase()));
+    }, [exams, examSearch]);
+
     useEffect(() => {
         const socket = getSocket();
         socket.emit('join-room', 'global-proctor-room');
 
         const handleProctorAlert = (data: any) => {
+            // Requirement: If Global view is selected, ONLY show violations of current ongoing exams
+            const isOngoing = activeExamIds.includes(data.examId);
+            if (selectedExamId === 'all' && !isOngoing) return;
+
             if (selectedExamId === 'all' || data.examId === selectedExamId) {
                 setLiveFeed(prev => [{ ...data, timestamp: new Date() }, ...prev].slice(0, 50));
                 setStats(prev => ({ ...prev, totalViolations: prev.totalViolations + 1 }));
@@ -73,6 +98,9 @@ export default function ProctorDashboard() {
         };
 
         const handleSuspension = (data: any) => {
+            const isOngoing = activeExamIds.includes(data.examId);
+            if (selectedExamId === 'all' && !isOngoing) return;
+
             if (selectedExamId === 'all' || data.examId === selectedExamId) {
                 setLiveFeed(prev => [{ ...data, type: 'SUSPENSION', message: data.reason, timestamp: new Date() }, ...prev].slice(0, 50));
                 setStats(prev => ({ ...prev, totalSuspensions: prev.totalSuspensions + 1 }));
@@ -95,13 +123,39 @@ export default function ProctorDashboard() {
     }, [selectedExamId]);
 
     const filteredViolations = useMemo(() => {
-        return violations.filter(v =>
-            v.studentId?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            v.studentId?.rollNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            v.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            v.examId?.title.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [violations, searchTerm]);
+        return violations.filter(v => {
+            // Requirement: If 'Global' is selected then only show violations of current ongoing exams
+            if (selectedExamId === 'all') {
+                const examId = v.examId?._id || v.examId;
+                if (!activeExamIds.includes(examId)) return false;
+            }
+
+            const studentName = v.studentId?.name || '';
+            const studentRoll = v.studentId?.rollNo || '';
+            const violationType = v.type || '';
+            const examTitle = v.examId?.title || '';
+            const search = searchTerm.toLowerCase();
+
+            return studentName.toLowerCase().includes(search) ||
+                studentRoll.toLowerCase().includes(search) ||
+                violationType.toLowerCase().includes(search) ||
+                examTitle.toLowerCase().includes(search);
+        });
+    }, [violations, searchTerm, activeExamIds, selectedExamId]);
+
+    const handleResume = async (examId: string, studentId: string) => {
+        try {
+            await resumeStudentSession(examId, studentId);
+            setActiveSessions(prev => prev.map(s =>
+                s.studentId._id === studentId
+                    ? { ...s, isSuspended: false }
+                    : s
+            ));
+            alert('Session resumed successfully.');
+        } catch (error: any) {
+            alert(error.response?.data?.message || 'Failed to resume session');
+        }
+    };
 
     const handleExportDefaulters = () => {
         if (violations.length === 0) return;
@@ -155,16 +209,37 @@ export default function ProctorDashboard() {
                 <div className="xl:col-span-1 space-y-6">
                     <div className="bg-white rounded-3xl p-6 shadow-lg border border-slate-200">
                         <label className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest block mb-2">Scope Filter</label>
-                        <div className="relative group/filter">
-                            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-600 dark:text-slate-400 pointer-events-none group-focus-within/filter:text-primary transition-colors" />
-                            <select
-                                value={selectedExamId}
-                                onChange={(e) => setSelectedExamId(e.target.value)}
-                                className="w-full bg-slate-100 dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 rounded-xl py-3 pl-10 pr-4 text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter"
-                            >
-                                <option value="all">Global (All Active Exams)</option>
-                                {exams.map(e => <option key={e._id} value={e._id}>{e.title}</option>)}
-                            </select>
+                        <div className="space-y-3">
+                            <div className="relative group/search">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-600 dark:text-slate-400 pointer-events-none group-focus-within/search:text-primary transition-colors" />
+                                <input
+                                    type="text"
+                                    placeholder="Search Exam Name..."
+                                    value={examSearch}
+                                    onChange={(e) => setExamSearch(e.target.value)}
+                                    className="w-full bg-slate-100 dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-primary transition-all"
+                                />
+                            </div>
+                            <div className="relative group/filter">
+                                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-600 dark:text-slate-400 pointer-events-none group-focus-within/filter:text-primary transition-colors" />
+                                <select
+                                    value={selectedExamId}
+                                    onChange={(e) => setSelectedExamId(e.target.value)}
+                                    className="w-full bg-slate-100 dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 rounded-xl py-3 pl-10 pr-4 text-xs font-black text-slate-900 dark:text-white uppercase tracking-tighter"
+                                >
+                                    <option value="all">Global (All Active Exams)</option>
+                                    {ongoingExams.length > 0 && (
+                                        <optgroup label="Published Exams (Ongoing)">
+                                            {ongoingExams.map(e => <option key={e._id} value={e._id}>{e.title}</option>)}
+                                        </optgroup>
+                                    )}
+                                    {historicalExams.length > 0 && (
+                                        <optgroup label="Historical/Ended Exams">
+                                            {historicalExams.map(e => <option key={e._id} value={e._id}>{e.title}</option>)}
+                                        </optgroup>
+                                    )}
+                                </select>
+                            </div>
                         </div>
                     </div>
 
@@ -217,6 +292,28 @@ export default function ProctorDashboard() {
                                                         </div>
                                                         <p className="font-black text-slate-900 text-sm">{alert.studentName}</p>
                                                         <p className="text-[10px] text-slate-900 dark:text-slate-100 mt-1 italic font-bold leading-relaxed truncate">"{alert.message}"</p>
+                                                        {/* Evidence Snapshot */}
+                                                        {alert.snapshot && (
+                                                            <div className="mt-2 flex items-center gap-2">
+                                                                <Camera className="h-3 w-3 text-blue-500 shrink-0" />
+                                                                <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest">Evidence</span>
+                                                                <img
+                                                                    src={alert.snapshot}
+                                                                    alt="Violation snapshot"
+                                                                    className="h-12 w-16 object-cover rounded-lg border-2 border-blue-500/30 shadow-md cursor-pointer hover:scale-150 transition-transform origin-left"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                        {/* Voice Transcript Evidence */}
+                                                        {alert.transcript && (
+                                                            <div className="mt-2 flex items-start gap-2 bg-amber-50 rounded-lg p-2 border border-amber-200/50">
+                                                                <MessageSquare className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" />
+                                                                <div>
+                                                                    <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest block">Voice Transcript</span>
+                                                                    <p className="text-[10px] text-amber-700 font-medium italic leading-relaxed">"{alert.transcript}"</p>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </motion.div>
                                             ))
@@ -233,7 +330,7 @@ export default function ProctorDashboard() {
                                 </div>
                                 <div className="flex-1 overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[600px]">
                                     {activeSessions.map((session, i) => (
-                                        <CandidateCard key={i} session={session} />
+                                        <CandidateCard key={i} session={session} onResume={handleResume} />
                                     ))}
                                     {activeSessions.length === 0 && (
                                         <div className="col-span-2 py-20">
@@ -309,62 +406,6 @@ export default function ProctorDashboard() {
                     )}
                 </div>
             </div>
-        </div>
-    );
-}
-
-function StatCard({ label, value, icon: Icon, color }: any) {
-    const variants: any = {
-        blue: 'bg-blue-600 shadow-blue-200',
-        orange: 'bg-orange-500 shadow-orange-200',
-        red: 'bg-red-600 shadow-red-200'
-    };
-    return (
-        <div className="bg-white p-6 rounded-3xl shadow-lg border border-slate-200 flex items-center justify-between transition-transform hover:-translate-y-1">
-            <div>
-                <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest mb-1">{label}</p>
-                <h4 className="text-3xl font-black text-slate-900 line-clamp-1">{value}</h4>
-            </div>
-            <div className={`p-4 rounded-2xl text-white shadow-xl ${variants[color]}`}>
-                <Icon className="h-6 w-6" />
-            </div>
-        </div>
-    );
-}
-
-function CandidateCard({ session }: any) {
-    return (
-        <div className={`p-4 rounded-2xl border-2 transition-all group ${session.isSuspended ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-100 hover:border-slate-200 hover:bg-white hover:shadow-md'}`}>
-            <div className="flex justify-between items-start mb-3">
-                <div className="h-10 w-10 rounded-xl bg-white shadow-sm flex items-center justify-center font-black text-primary border border-slate-100 text-xs uppercase tracking-tighter group-hover:scale-110 transition-transform">
-                    {session.studentId?.name.charAt(0)}
-                </div>
-                {session.isSuspended ? (
-                    <span className="text-[8px] font-black bg-red-600 text-white px-2 py-0.5 rounded-full shadow-sm">SUSPENDED</span>
-                ) : (
-                    <div className="flex items-center gap-1.5">
-                        <div className="h-1.5 w-1.5 rounded-full bg-green-400" />
-                        <span className="text-[8px] font-black text-green-600 uppercase tracking-widest">Active</span>
-                    </div>
-                )}
-            </div>
-            <p className="font-black text-slate-800 text-sm truncate">{session.studentId?.name}</p>
-            <div className="flex items-center justify-between mt-3 text-[9px] font-black text-slate-900 dark:text-white uppercase tracking-widest">
-                <span>Violations: <span className={session.violationCount > 0 ? 'text-orange-500' : ''}>{session.violationCount || 0}</span></span>
-                <span className="bg-white px-2 py-0.5 rounded border border-slate-100 truncate max-w-[80px]">{session.examId?.title}</span>
-            </div>
-        </div>
-    );
-}
-
-function EmptyState({ icon: Icon, title, text }: any) {
-    return (
-        <div className="flex flex-col items-center justify-center py-20 text-center opacity-60">
-            <div className="bg-slate-100 p-6 rounded-full mb-4 group-hover:bg-slate-200 transition-colors">
-                <Icon className="h-10 w-10 text-slate-400" />
-            </div>
-            <h4 className="font-black text-slate-800 text-sm uppercase tracking-widest">{title}</h4>
-            <p className="text-xs text-slate-400 max-w-[180px] mt-2 font-medium">{text}</p>
         </div>
     );
 }

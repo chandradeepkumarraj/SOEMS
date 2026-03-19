@@ -1,24 +1,15 @@
-import axios from 'axios';
+import apiClient from './apiClient';
 import { getCurrentUser } from './authService';
-import { API_BASE_URL } from '../config';
 
-const API_URL = `${API_BASE_URL}/api/users`;
-
-const getAuthHeader = () => {
-    const user = getCurrentUser();
-    if (user && user.token) {
-        return { Authorization: `Bearer ${user.token}` };
-    }
-    return {};
-};
+const API_URL = '/api/users';
 
 export const getUserProfile = async () => {
-    const response = await axios.get(`${API_URL}/profile`, { headers: getAuthHeader() });
+    const response = await apiClient.get(`${API_URL}/profile`);
     return response.data;
 };
 
 export const updateUserProfile = async (userData: any) => {
-    const response = await axios.put(`${API_URL}/profile`, userData, { headers: getAuthHeader() });
+    const response = await apiClient.put(`${API_URL}/profile`, userData);
 
     // Update local storage user data (preserving token)
     const currentUser = getCurrentUser();
@@ -31,6 +22,11 @@ export const updateUserProfile = async (userData: any) => {
 };
 
 export const getMyStudents = async () => {
-    const response = await axios.get(`${API_URL}/my-students`, { headers: getAuthHeader() });
+    const response = await apiClient.get(`${API_URL}/my-students`);
+    return response.data;
+};
+
+export const getProctors = async () => {
+    const response = await apiClient.get(`${API_URL}/proctors`);
     return response.data;
 };

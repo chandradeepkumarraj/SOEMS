@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
+import SystemConfig from '../models/SystemConfig';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 
@@ -31,6 +32,14 @@ export const loginUser = async (req: Request, res: Response) => {
         const user = await User.findOne({ email });
 
         if (user && (await user.matchPassword(password))) {
+            // Check Maintenance Mode
+            const config = await (SystemConfig as any).getOrCreate();
+            if (config.maintenanceMode && user.role !== 'admin') {
+                return res.status(503).json({ 
+                    message: 'System is currently under maintenance. Only administrators can log in at this time.' 
+                });
+            }
+
             res.json({
                 _id: user._id,
                 name: user.name,
@@ -140,6 +149,22 @@ export const resetAdminPassword = async (req: Request, res: Response) => {
         await user.save();
 
         res.json({ message: 'Password reset successfully' });
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get current user profile
+// @route   GET /api/auth/me
+// @access  Private
+export const getMe = async (req: any, res: Response) => {
+    try {
+        const user = await User.findById(req.user._id).select('-password');
+        if (user) {
+            res.json(user);
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }

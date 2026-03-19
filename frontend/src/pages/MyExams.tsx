@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getExams, deleteExam, endExam } from '../services/examService';
+import { getExams, deleteExam, endExam, resetExam } from '../services/examService';
 import { getResultsByExam } from '../services/resultService';
-import { BarChart3, Pencil, Trash2, Download, Search, StopCircle } from 'lucide-react';
+import { BarChart3, Pencil, Trash2, Download, Search, StopCircle, Copy, RotateCcw } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 
 export default function MyExams() {
     const [exams, setExams] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [resettingId, setResettingId] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchExams = async () => {
@@ -87,6 +88,36 @@ export default function MyExams() {
         }
     };
 
+    const handleResetExam = async (examId: string, title: string) => {
+        const exam = exams.find(e => e._id === examId);
+        const isAdaptive = exam?.isAdaptive || false;
+
+        let regenerateQuestions = false;
+        if (isAdaptive) {
+            const choice = window.confirm(
+                `⚠️ RESET ADAPTIVE EXAM: "${title}"\n\nThis will wipe all student data. \n\nDo you also want to REGENERATE a fresh AI Question Pool? \n\nClick "OK" to generate new questions.\nClick "Cancel" to keep the existing pool.`
+            );
+            regenerateQuestions = choice;
+        } else {
+            if (!window.confirm(
+                `⚠️ RESET EXAM: "${title}"\n\nThis will permanently delete ALL student results, sessions, and violation records for this exam. The exam will be republished for retake.\n\nAre you absolutely sure?`
+            )) return;
+        }
+
+        try {
+            setResettingId(examId);
+            const result = await resetExam(examId, regenerateQuestions);
+            alert(`✅ Exam reset successfully!\n\nDeleted: ${result.deletedResults} results, ${result.deletedSessions} sessions, ${result.deletedViolations} violations.${regenerateQuestions ? '\n\nAI is now generating a fresh question pool in the background.' : ''}\n\nNOTE: The exam is scheduled to go live in 2 minutes for system readiness.`);
+            const data = await getExams();
+            setExams(data);
+        } catch (error: any) {
+            console.error('Failed to reset exam:', error);
+            alert(error.response?.data?.message || 'Failed to reset exam. Please try again.');
+        } finally {
+            setResettingId(null);
+        }
+    };
+
     const filteredExams = exams.filter(exam =>
         exam.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -159,32 +190,50 @@ export default function MyExams() {
                                                 {exam.status === 'published' && (
                                                     <button
                                                         onClick={() => handleEndExam(exam._id)}
-                                                        className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg text-gray-400 dark:text-slate-500 hover:text-error"
+                                                        className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-slate-900 dark:text-slate-400 hover:text-red-700 dark:hover:text-red-400 transition-colors"
                                                         title="Stop Exam Manually"
                                                     >
                                                         <StopCircle className="h-4 w-4" />
                                                     </button>
                                                 )}
+                                                {(exam.status === 'closed' || exam.status === 'archived') && (
+                                                    <button
+                                                        onClick={() => handleResetExam(exam._id, exam.title)}
+                                                        disabled={resettingId === exam._id}
+                                                        className={`p-2 rounded-lg transition-colors ${resettingId === exam._id
+                                                            ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                                                            : 'text-slate-900 dark:text-slate-400 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 hover:text-cyan-700 dark:hover:text-cyan-400'
+                                                            }`}
+                                                        title={resettingId === exam._id ? "Resetting..." : "Reset Exam for Re-take"}
+                                                    >
+                                                        <RotateCcw className={`h-4 w-4 ${resettingId === exam._id ? 'animate-spin' : ''}`} />
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={() => handleDownloadReport(exam._id, exam.title)}
-                                                    className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg text-gray-400 dark:text-slate-500 hover:text-green-600"
+                                                    className="p-2 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-lg text-slate-900 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
                                                     title="Download Report"
                                                 >
                                                     <Download className="h-4 w-4" />
                                                 </button>
                                                 <Link to={`/teacher/analytics/${exam._id}`}>
-                                                    <button className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg text-gray-400 dark:text-slate-500 hover:text-primary" title="Analytics">
+                                                    <button className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg text-slate-900 dark:text-slate-400 hover:text-blue-700 dark:hover:text-blue-400 transition-colors" title="Analytics">
                                                         <BarChart3 className="h-4 w-4" />
                                                     </button>
                                                 </Link>
                                                 <Link to={`/teacher/create-exam?edit=${exam._id}`}>
-                                                    <button className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg text-gray-400 dark:text-slate-500 hover:text-blue-600" title="Edit">
+                                                    <button className="p-2 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-lg text-slate-900 dark:text-slate-400 hover:text-amber-700 dark:hover:text-amber-400 transition-colors" title="Edit">
                                                         <Pencil className="h-4 w-4" />
+                                                    </button>
+                                                </Link>
+                                                <Link to={`/teacher/create-exam?clone=${exam._id}`}>
+                                                    <button className="p-2 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded-lg text-slate-900 dark:text-slate-400 hover:text-orange-700 dark:hover:text-orange-400 transition-colors" title="Clone as New Version">
+                                                        <Copy className="h-4 w-4" />
                                                     </button>
                                                 </Link>
                                                 <button
                                                     onClick={() => handleDelete(exam._id)}
-                                                    className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-gray-400 dark:text-slate-500 hover:text-red-600"
+                                                    className="p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg text-slate-900 dark:text-slate-400 hover:text-red-700 dark:hover:text-red-400 transition-colors"
                                                     title="Delete"
                                                 >
                                                     <Trash2 className="h-4 w-4" />

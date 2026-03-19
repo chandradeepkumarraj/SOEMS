@@ -3,13 +3,15 @@ import { Button } from '../components/ui/Button';
 import { Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { getResultById, getResultAnalysis } from '../services/resultService';
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts';
-import { CheckCircle, XCircle, ArrowLeft, Download, Target, TrendingUp, Award } from 'lucide-react';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { CheckCircle, XCircle, ArrowLeft, Download, Target, TrendingUp, Award, ShieldAlert, Twitter, Linkedin, Layers } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { useAIStatus } from '../hooks/useAIStatus';
 
 export default function Results() {
     const { id } = useParams();
+    const { getModelDisplayName } = useAIStatus();
     const [result, setResult] = useState<any>(null);
     const [analysis, setAnalysis] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -35,28 +37,63 @@ export default function Results() {
 
         // Add professional branding to the clone
         const branding = document.createElement('div');
-        branding.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 4px solid #2563eb; padding-bottom: 20px; margin-bottom: 40px;">
-                <div>
-                    <h1 style="font-size: 32px; font-weight: 900; color: #0f172a; margin: 0; letter-spacing: -1px;">SOEMS</h1>
-                    <p style="font-size: 12px; font-weight: 800; color: #2563eb; margin: 0; text-transform: uppercase; letter-spacing: 2px;">Secure Online Examination Management System</p>
-                </div>
-                <div style="text-align: right;">
-                    <p style="font-size: 14px; font-weight: 900; color: #0f172a; margin: 0; text-transform: uppercase;">Official Result Registry</p>
-                    <p style="font-size: 10px; font-weight: 700; color: #64748b; margin: 0;">Verified & Validated Report</p>
-                </div>
-            </div>
-            <div style="display: grid; grid-template-cols: 1fr 1fr; gap: 20px; margin-bottom: 40px; background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;">
-                <div>
-                    <label style="font-size: 9px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">Candidate Name</label>
-                    <p style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">${result.studentId?.name || 'N/A'}</p>
-                </div>
-                <div>
-                    <label style="font-size: 9px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">Academic Subject</label>
-                    <p style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">${result.examId?.title || 'Unknown'}</p>
-                </div>
-            </div>
-        `;
+
+        // Header Row
+        const headerRow = document.createElement('div');
+        headerRow.style.cssText = "display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 4px solid #2563eb; padding-bottom: 20px; margin-bottom: 40px;";
+
+        const leftHeader = document.createElement('div');
+        const logo = document.createElement('h1');
+        logo.style.cssText = "font-size: 32px; font-weight: 900; color: #0f172a; margin: 0; letter-spacing: -1px;";
+        logo.textContent = "SOEMS";
+        const subLogo = document.createElement('p');
+        subLogo.style.cssText = "font-size: 12px; font-weight: 800; color: #2563eb; margin: 0; text-transform: uppercase; letter-spacing: 2px;";
+        subLogo.textContent = "Secure Online Examination Management System";
+        leftHeader.appendChild(logo);
+        leftHeader.appendChild(subLogo);
+
+        const rightHeader = document.createElement('div');
+        rightHeader.style.textAlign = 'right';
+        const title1 = document.createElement('p');
+        title1.style.cssText = "font-size: 14px; font-weight: 900; color: #0f172a; margin: 0; text-transform: uppercase;";
+        title1.textContent = "Official Result Registry";
+        const title2 = document.createElement('p');
+        title2.style.cssText = "font-size: 10px; font-weight: 700; color: #64748b; margin: 0;";
+        title2.textContent = "Verified & Validated Report";
+        rightHeader.appendChild(title1);
+        rightHeader.appendChild(title2);
+
+        headerRow.appendChild(leftHeader);
+        headerRow.appendChild(rightHeader);
+        branding.appendChild(headerRow);
+
+        // Info Grid
+        const infoGrid = document.createElement('div');
+        infoGrid.style.cssText = "display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px; background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;";
+
+        const candidateInfo = document.createElement('div');
+        const candidateLabel = document.createElement('label');
+        candidateLabel.style.cssText = "font-size: 9px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 1px;";
+        candidateLabel.textContent = "Candidate Name";
+        const candidateName = document.createElement('p');
+        candidateName.style.cssText = "font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;";
+        candidateName.textContent = result.studentId?.name || 'N/A';
+        candidateInfo.appendChild(candidateLabel);
+        candidateInfo.appendChild(candidateName);
+
+        const subjectInfo = document.createElement('div');
+        const subjectLabel = document.createElement('label');
+        subjectLabel.style.cssText = "font-size: 9px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 1px;";
+        subjectLabel.textContent = "Academic Subject";
+        const subjectName = document.createElement('p');
+        subjectName.style.cssText = "font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;";
+        subjectName.textContent = result.examId?.title || 'Unknown';
+        subjectInfo.appendChild(subjectLabel);
+        subjectInfo.appendChild(subjectName);
+
+        infoGrid.appendChild(candidateInfo);
+        infoGrid.appendChild(subjectInfo);
+        branding.appendChild(infoGrid);
         clone.insertBefore(branding, clone.firstChild);
 
         // Hide UI elements in the clone
@@ -150,6 +187,7 @@ export default function Results() {
         );
     }
 
+
     const percentage = result.totalPoints > 0 ? (result.score / result.totalPoints) * 100 : 0;
     const correctAnswers = result.answers.filter((a: any) => a.isCorrect).length;
 
@@ -233,8 +271,116 @@ export default function Results() {
                                 <p className="text-xl font-bold text-gray-900 dark:text-white">{Math.round(percentage)}%</p>
                             </div>
                         </div>
+
+                        {/* Proctoring AI Insight */}
+                        {result.heiScore !== undefined && (
+                            <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-800 text-left">
+                                <h3 className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-slate-400 mb-4 flex items-center gap-2">
+                                    <ShieldAlert className="h-4 w-4 text-primary" />
+                                    AI Proctoring Evaluation ({getModelDisplayName()})
+                                </h3>
+                                <div className="bg-white dark:bg-slate-950 p-6 rounded-xl border border-gray-200 dark:border-slate-800 flex flex-col sm:flex-row items-center gap-6 shadow-sm">
+                                    <div className="flex-shrink-0">
+                                        <div className="relative inline-flex items-center justify-center">
+                                            <svg className="w-24 h-24 transform -rotate-90">
+                                                <circle className="text-gray-100 dark:text-slate-800" strokeWidth="8" stroke="currentColor" fill="transparent" r="40" cx="48" cy="48" />
+                                                <circle
+                                                    className={result.heiScore >= 90 ? "text-success" : result.heiScore >= 50 ? "text-warning" : "text-error"}
+                                                    strokeWidth="8" strokeDasharray={251.2} strokeDashoffset={251.2 - (251.2 * result.heiScore) / 100} strokeLinecap="round" stroke="currentColor" fill="transparent" r="40" cx="48" cy="48"
+                                                />
+                                            </svg>
+                                            <div className="absolute flex flex-col items-center">
+                                                <span className="text-2xl font-black text-gray-900 dark:text-white">{result.heiScore}</span>
+                                            </div>
+                                        </div>
+                                        <p className="text-[10px] font-black uppercase text-center mt-2 text-slate-500 tracking-wider">HEI Index</p>
+                                    </div>
+                                    <div className="flex-1 text-center sm:text-left">
+                                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300 italic leading-relaxed">
+                                            "{result.heiSummary || 'Behavioral telemetry processed and cleared.'}"
+                                        </p>
+                                        <p className="text-[10px] uppercase font-bold text-slate-400 mt-2">
+                                            {result.heiScore >= 90 ? 'Session Secure - No Action Required' : result.heiScore >= 50 ? 'Moderate Risk - Manual Review Advised' : 'High Risk - Suspension Recommended'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </motion.div>
+
+                {/* Badge Showcase */}
+                {result.badges && result.badges.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-8"
+                    >
+                        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-200 dark:border-slate-800 p-8">
+                            <h3 className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-slate-400 mb-6 flex items-center gap-2">
+                                <Award className="h-4 w-4 text-primary" />
+                                Milestone Achievements
+                            </h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {result.badges.map((badge: any, bIdx: number) => (
+                                    <div key={bIdx} className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-4">
+                                        <div className="w-16 h-16 flex-shrink-0 bg-white dark:bg-slate-900 rounded-lg p-2 shadow-sm border border-slate-100 dark:border-slate-800">
+                                            <img
+                                                src={`/badges/${badge.icon}.png`}
+                                                alt={badge.label}
+                                                className="w-full h-full object-contain"
+                                                onError={(e) => {
+                                                    (e.target as HTMLImageElement).src = 'https://cdn-icons-png.flaticon.com/512/190/190411.png';
+                                                }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{badge.label}</h4>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">{badge.description}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Social Sharing */}
+                            {!isPrinting && (
+                                <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-800">
+                                    <p className="text-center text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Celebrate Your Success</p>
+                                    <div className="flex justify-center flex-wrap gap-4">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="gap-2 rounded-full px-6 dark:border-slate-800 dark:hover:bg-slate-800"
+                                            onClick={() => {
+                                                const studentName = result.studentId?.name || 'A student';
+                                                const text = `${studentName} just earned the ${result.badges[0].label} badge in ${result.examId?.title} on SOEMS! 🚀 #SOEMS #Education #Achievement`;
+                                                window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+                                            }}
+                                        >
+                                            <Twitter className="h-4 w-4 text-[#1DA1F2]" />
+                                            Share Achievement
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="gap-2 rounded-full px-6 dark:border-slate-800 dark:hover:bg-slate-800"
+                                            onClick={() => {
+                                                const studentName = result.studentId?.name || 'A student';
+                                                const title = `${studentName} achieved a milestone on SOEMS!`;
+                                                const summary = `I successfully completed the ${result.examId?.title} with a ${Math.round(percentage)}% score and earned the ${result.badges[0].label} badge!`;
+                                                window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}&title=${encodeURIComponent(title)}&summary=${encodeURIComponent(summary)}`, '_blank');
+                                            }}
+                                        >
+                                            <Linkedin className="h-4 w-4 text-[#0A66C2]" />
+                                            Post to LinkedIn
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+
                 {/* Insights Section */}
                 {analysis && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
@@ -248,7 +394,7 @@ export default function Results() {
                                 <Target className="h-5 w-5 text-primary" /> Topic Analysis
                             </h3>
                             <div className="h-[250px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
+                                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={100}>
                                     <RadarChart cx="50%" cy="50%" outerRadius="80%" data={analysis.topicPerformance}>
                                         <PolarGrid />
                                         <PolarAngleAxis dataKey="topic" />
@@ -366,6 +512,44 @@ export default function Results() {
                     </motion.div>
                 )}
 
+                {/* Adaptive Insights Section */}
+                {analysis?.isAdaptive && analysis?.adaptiveStats && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-12 bg-indigo-50 dark:bg-indigo-950/20 rounded-2xl border border-indigo-100 dark:border-indigo-900/30 p-6"
+                    >
+                        <h3 className="text-lg font-bold text-indigo-900 dark:text-indigo-200 mb-4 flex items-center gap-2">
+                            <Layers className="h-5 w-5 text-indigo-600" /> Adaptive Difficulty Curve
+                        </h3>
+                        <p className="text-sm text-indigo-800 dark:text-indigo-400 mb-6 flex justify-between items-center">
+                            <span>This exam adjusted difficulty dynamically. Here is your performance across difficulty tiers.</span>
+                        </p>
+
+                        <div className="h-[250px] w-full">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={100}>
+                                <BarChart
+                                    data={[
+                                        { name: 'Easy', correct: analysis.adaptiveStats.easy.correct, incorrect: analysis.adaptiveStats.easy.total - analysis.adaptiveStats.easy.correct },
+                                        { name: 'Medium', correct: analysis.adaptiveStats.medium.correct, incorrect: analysis.adaptiveStats.medium.total - analysis.adaptiveStats.medium.correct },
+                                        { name: 'Hard', correct: analysis.adaptiveStats.hard.correct, incorrect: analysis.adaptiveStats.hard.total - analysis.adaptiveStats.hard.correct }
+                                    ]}
+                                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                    <XAxis dataKey="name" tick={{ fill: '#64748b' }} />
+                                    <YAxis tick={{ fill: '#64748b' }} />
+                                    <Tooltip
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                    />
+                                    <Bar dataKey="correct" stackId="a" fill="#10b981" name="Correct" radius={[0, 0, 4, 4]} />
+                                    <Bar dataKey="incorrect" stackId="a" fill="#ef4444" name="Incorrect" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </motion.div>
+                )}
+
                 {/* Detailed Analysis */}
                 <div className="space-y-6">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white">Detailed Analysis</h2>
@@ -389,20 +573,67 @@ export default function Results() {
                                         {answer.questionId?.text || 'Question'}
                                     </h3>
 
-                                    <div className="grid md:grid-cols-2 gap-4 text-sm">
-                                        <div className={`p-3 rounded-lg ${answer.isCorrect ? 'bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/30' : 'bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30'
-                                            }`}>
-                                            <p className="text-xs text-gray-500 dark:text-slate-500 mb-1">Your Answer</p>
-                                            <p className={`font-medium ${answer.isCorrect ? 'text-success' : 'text-error'}`}>
-                                                {answer.questionId?.options?.[answer.selectedOption] || `Option ${answer.selectedOption + 1}`}
-                                            </p>
-                                        </div>
-                                        {!answer.isCorrect && (
-                                            <div className="p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800">
-                                                <p className="text-xs text-gray-500 dark:text-slate-500 mb-1">Correct Answer</p>
-                                                <p className="font-medium text-gray-900 dark:text-white">
-                                                    {answer.questionId?.options?.[answer.questionId.correctAnswer] || `Option ${answer.questionId?.correctAnswer + 1}`}
-                                                </p>
+                                    <div className="grid md:grid-cols-1 gap-4 text-sm">
+                                        {answer.questionId?.type === 'descriptive' ? (
+                                            <div className="space-y-4">
+                                                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
+                                                    <p className="text-xs font-black uppercase text-slate-500 mb-2">Your Submission</p>
+                                                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed italic select-text">
+                                                        {answer.textAnswer || 'No answer provided.'}
+                                                    </p>
+                                                </div>
+
+                                                {answer.missingConcepts?.length > 0 && (
+                                                    <div className="p-4 rounded-xl bg-red-50/50 dark:bg-red-950/10 border border-red-100 dark:border-red-950/30">
+                                                        <p className="text-xs font-black uppercase text-red-600 dark:text-red-400 mb-2">Missing Key Concepts</p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {answer.missingConcepts.map((concept: string, cIdx: number) => (
+                                                                <span key={cIdx} className="px-2 py-1 bg-white dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-md text-xs font-bold border border-red-100 dark:border-red-800/30">
+                                                                    {concept}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {answer.remediationSteps?.length > 0 && (
+                                                    <div className="p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30">
+                                                        <p className="text-xs font-black uppercase text-primary dark:text-blue-400 mb-2">AI Remediation Roadmap</p>
+                                                        <ul className="space-y-2">
+                                                            {answer.remediationSteps.map((step: string, sIdx: number) => (
+                                                                <li key={sIdx} className="text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2">
+                                                                    <div className="mt-1 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
+                                                                    {step}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                )}
+
+                                                <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-100 dark:border-emerald-950/30">
+                                                    <p className="text-xs font-black uppercase text-emerald-600 dark:text-emerald-400 mb-1">AI Evaluator Feedback</p>
+                                                    <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300 italic">
+                                                        "{answer.aiFeedback}"
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="grid md:grid-cols-2 gap-4">
+                                                <div className={`p-3 rounded-lg ${answer.isCorrect ? 'bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/30' : 'bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30'
+                                                    }`}>
+                                                    <p className="text-xs text-gray-500 dark:text-slate-500 mb-1">Your Answer</p>
+                                                    <p className={`font-medium ${answer.isCorrect ? 'text-success' : 'text-error'}`}>
+                                                        {answer.questionId?.options?.[answer.selectedOption] || `Option ${answer.selectedOption + 1}`}
+                                                    </p>
+                                                </div>
+                                                {!answer.isCorrect && (
+                                                    <div className="p-3 rounded-lg bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800">
+                                                        <p className="text-xs text-gray-500 dark:text-slate-500 mb-1">Correct Answer</p>
+                                                        <p className="font-medium text-gray-900 dark:text-white">
+                                                            {answer.questionId?.options?.[answer.questionId.correctAnswer] || `Option ${answer.questionId?.correctAnswer + 1}`}
+                                                        </p>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>

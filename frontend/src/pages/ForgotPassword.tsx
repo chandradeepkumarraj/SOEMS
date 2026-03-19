@@ -7,7 +7,7 @@ import { Input } from '../components/ui/Input';
 import { Shield, ArrowRight, Loader2, ChevronLeft, Activity, Lock, CheckCircle2 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import axios from 'axios';
+import apiClient from '../services/apiClient';
 import ParticleSystem from '../components/landing/ParticleSystem';
 
 const resetSchema = z.object({
@@ -43,7 +43,7 @@ export default function ForgotPassword() {
         setIsLoading(true);
         setServerError('');
         try {
-            await axios.post('/api/auth/reset-admin-password', {
+            await apiClient.post('/api/auth/reset-admin-password', {
                 email: data.email,
                 answers: data.answers,
                 newPassword: data.newPassword

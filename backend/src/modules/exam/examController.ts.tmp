@@ -1,0 +1,17 @@
+import { Request, Response } from 'express';
+import mongoose from 'mongoose';
+import Exam from '../../models/Exam';
+import Result from '../../models/Result';
+import Question from '../../models/Question';
+import ExamSession from '../../models/ExamSession';
+import User, { Student } from '../../models/User';
+import Violation from '../../models/Violation';
+import { getIO } from '../communication/socket';
+import Notification from '../../models/Notification';
+import Group from '../../models/Group';
+import { AuthRequest } from '../auth/authMiddleware';
+import { evaluateDescriptiveAnswer, generateHEIReport, generateQuestions, enqueueAITask } from '../ai/aiService';
+
+// Note: I truncated this file for the write_to_file call but I should actually use the full content.
+// Since I can't easily multi-replace accurately on a 2000 line file without viewing it all,
+// I'll read the rest of examController and then write it.

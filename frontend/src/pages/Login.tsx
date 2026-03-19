@@ -6,11 +6,11 @@ import { Input } from '../components/ui/Input';
 import {
     Shield, GraduationCap, BookOpen, Lock,
     Activity, ArrowRight, Loader2, Eye, EyeOff,
-    ChevronLeft
+    ChevronLeft, Clock
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { login, getCurrentUser } from '../services/authService';
+import { login, getCurrentUser, getMaintenanceStatus } from '../services/authService';
 import { loginSchema, LoginFormValues } from '../utils/authSchema';
 import ParticleSystem from '../components/landing/ParticleSystem';
 
@@ -20,6 +20,19 @@ export default function Login() {
     const [serverError, setServerError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [maintenance, setMaintenance] = useState(false);
+
+    useEffect(() => {
+        const checkStatus = async () => {
+            try {
+                const data = await getMaintenanceStatus();
+                setMaintenance(data.maintenanceMode);
+            } catch (err) {
+                console.error('Failed to fetch maintenance status');
+            }
+        };
+        checkStatus();
+    }, []);
 
     const {
         register,
@@ -63,7 +76,7 @@ export default function Login() {
             bg: 'bg-cyber-cyan/10',
             shadow: 'shadow-glow-cyan',
             gradient: 'from-cyber-cyan to-cyber-blue',
-            placeholder: 'student@soems.edu'
+            placeholder: 'Enter your email'
         },
         {
             id: 'teacher',
@@ -74,7 +87,7 @@ export default function Login() {
             bg: 'bg-cyber-green/10',
             shadow: 'shadow-glow-green',
             gradient: 'from-cyber-green to-emerald-500',
-            placeholder: 'faculty@soems.edu'
+            placeholder: 'Enter your email'
         },
         {
             id: 'admin',
@@ -85,7 +98,7 @@ export default function Login() {
             bg: 'bg-cyber-purple/10',
             shadow: 'shadow-glow-purple',
             gradient: 'from-cyber-purple to-cyber-pink',
-            placeholder: 'admin@soems.protocol'
+            placeholder: 'Enter your email'
         },
         {
             id: 'proctor',
@@ -96,7 +109,7 @@ export default function Login() {
             bg: 'bg-cyber-pink/10',
             shadow: 'shadow-glow-pink',
             gradient: 'from-cyber-pink to-rose-500',
-            placeholder: 'auditor@soems.io'
+            placeholder: 'Enter your email'
         },
     ];
 
@@ -226,6 +239,27 @@ export default function Login() {
 
                             <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
                                 <AnimatePresence mode="wait">
+                                    {maintenance && role !== 'admin' && (
+                                        <motion.div
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            className="p-6 rounded-[2rem] bg-amber-500/10 border border-amber-500/20 mb-8"
+                                        >
+                                            <div className="flex items-center gap-4 mb-2">
+                                                <div className="h-10 w-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-500">
+                                                    <Clock className="h-5 w-5 animate-pulse" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em]">Maintenance Protocol</h4>
+                                                    <p className="text-[9px] text-amber-500/60 font-black uppercase">System Restricted</p>
+                                                </div>
+                                            </div>
+                                            <p className="text-[10px] text-slate-400 font-bold leading-relaxed uppercase tracking-wider">
+                                                The system is currently undergoing scheduled upgrades. Only administrative personnel can establish sessions at this time.
+                                            </p>
+                                        </motion.div>
+                                    )}
+
                                     {serverError && (
                                         <motion.div
                                             initial={{ opacity: 0, y: -10 }}
@@ -241,7 +275,7 @@ export default function Login() {
 
                                 <div className="space-y-6">
                                     <div className="space-y-3">
-                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-4">Email Terminal</label>
+                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-4">Email Address</label>
                                         <div className="group relative">
                                             <Input
                                                 {...register('email')}
@@ -255,7 +289,7 @@ export default function Login() {
 
                                     <div className="space-y-3">
                                         <div className="flex justify-between items-center px-4">
-                                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Security Pass</label>
+                                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Password</label>
                                             {role === 'admin' && (
                                                 <Link to="/forgot-password" className="text-[10px] font-black uppercase tracking-widest text-cyber-purple hover:text-white transition-all underline underline-offset-4 decoration-cyber-purple/30">Recover</Link>
                                             )}
@@ -264,7 +298,7 @@ export default function Login() {
                                             <Input
                                                 {...register('password')}
                                                 type={showPassword ? 'text' : 'password'}
-                                                placeholder="ACCESS_KEY_PROTOCOL"
+                                                placeholder="Enter your password"
                                                 className={`h-16 bg-white/[0.03] border-white/10 rounded-[2rem] focus:ring-2 focus:ring-${currentRoleData.id === 'student' ? 'cyber-cyan' : currentRoleData.id === 'teacher' ? 'cyber-green' : currentRoleData.id === 'admin' ? 'cyber-purple' : 'cyber-pink'}/20 px-8 font-semibold text-white transition-all ${errors.password ? 'ring-2 ring-red-500/50' : ''}`}
                                             />
                                             <button

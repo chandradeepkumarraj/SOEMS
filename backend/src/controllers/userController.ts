@@ -12,7 +12,10 @@ export const getUserProfile = async (req: any, res: Response) => {
     try {
         const user = await User.findById(req.user._id)
             .populate('groupId', 'name')
-            .populate('subgroupId', 'name academicYear');
+            .populate('subgroupId', 'name academicYear')
+            .populate('managedGroups', 'name')
+            .populate('departmentProctors.groupId', 'name')
+            .populate('departmentProctors.proctorId', 'name email');
 
         if (user) {
             res.json({
@@ -26,6 +29,10 @@ export const getUserProfile = async (req: any, res: Response) => {
                 institution: user.institution,
                 group: user.groupId,
                 subgroup: user.subgroupId,
+                defaultProctorId: (user as any).defaultProctorId,
+                groupId: (user as any).groupId,
+                managedGroups: (user as any).managedGroups,
+                departmentProctors: (user as any).departmentProctors,
                 createdAt: user.createdAt
             });
         } else {
@@ -56,6 +63,42 @@ export const updateUserProfile = async (req: any, res: Response) => {
                 user.address = req.body.address !== undefined ? req.body.address : user.address;
                 user.bio = req.body.bio !== undefined ? req.body.bio : user.bio;
                 user.institution = req.body.institution !== undefined ? req.body.institution : user.institution;
+                
+                // ObjectId Validation for Audit & Integrity
+                if (req.body.groupId) {
+                    if (mongoose.Types.ObjectId.isValid(req.body.groupId)) {
+                        (user as any).groupId = req.body.groupId;
+                    } else {
+                        return res.status(400).json({ message: 'Invalid Department ID' });
+                    }
+                } else {
+                    (user as any).groupId = null;
+                }
+
+                if (req.body.defaultProctorId) {
+                    if (mongoose.Types.ObjectId.isValid(req.body.defaultProctorId)) {
+                        (user as any).defaultProctorId = req.body.defaultProctorId;
+                    } else {
+                        return res.status(400).json({ message: 'Invalid Proctor ID' });
+                    }
+                } else {
+                    (user as any).defaultProctorId = null;
+                }
+
+                if (req.body.managedGroups && Array.isArray(req.body.managedGroups)) {
+                    const validGroupIds = req.body.managedGroups.filter((id: string) => mongoose.Types.ObjectId.isValid(id));
+                    (user as any).managedGroups = validGroupIds;
+                }
+
+                if (req.body.departmentProctors && Array.isArray(req.body.departmentProctors)) {
+                    const validMappings = req.body.departmentProctors
+                        .filter((m: any) => m.groupId && m.proctorId && mongoose.Types.ObjectId.isValid(m.groupId) && mongoose.Types.ObjectId.isValid(m.proctorId))
+                        .map((m: any) => ({
+                            groupId: m.groupId,
+                            proctorId: m.proctorId
+                        }));
+                    (user as any).departmentProctors = validMappings;
+                }
             }
 
             if (req.body.password) {
@@ -67,8 +110,10 @@ export const updateUserProfile = async (req: any, res: Response) => {
 
             res.json({
                 ...updatedUser,
-                group: (user as any).groupId,
-                subgroup: (user as any).subgroupId
+                groupId: (user as any).groupId,
+                defaultProctorId: (user as any).defaultProctorId,
+                managedGroups: (user as any).managedGroups,
+                departmentProctors: (user as any).departmentProctors
             });
         } else {
             res.status(404).json({ message: 'User not found' });
@@ -134,6 +179,18 @@ export const getMyStudents = async (req: any, res: Response) => {
         ]);
 
         res.json(studentStats);
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get all proctors
+// @route   GET /api/users/proctors
+// @access  Private (Teacher/Admin)
+export const getProctors = async (req: Request, res: Response) => {
+    try {
+        const proctors = await User.find({ role: 'proctor' }).select('name email _id').sort({ name: 1 });
+        res.json(proctors);
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }

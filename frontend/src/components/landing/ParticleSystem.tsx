@@ -202,7 +202,9 @@ const ParticleSystem = () => {
             // Update Lines
             linesGeometry.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
 
-            renderer.render(scene, camera);
+            if (window.innerWidth > 0 && window.innerHeight > 0) {
+                renderer.render(scene, camera);
+            }
         };
 
         animate();

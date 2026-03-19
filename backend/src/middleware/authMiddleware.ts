@@ -17,39 +17,39 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
 
             req.user = await User.findById(decoded.id).select('-password');
 
-            next();
+            return next();
         } catch (error) {
             console.error(error);
-            res.status(401).json({ message: 'Not authorized, token failed' });
+            return res.status(401).json({ message: 'Not authorized, token failed' });
         }
     }
 
     if (!token) {
-        res.status(401).json({ message: 'Not authorized, no token' });
+        return res.status(401).json({ message: 'Not authorized, no token' });
     }
-
+    return;
 };
 
 export const teacher = (req: AuthRequest, res: Response, next: NextFunction) => {
     if (req.user && (req.user.role === 'teacher' || req.user.role === 'admin')) {
-        next();
+        return next();
     } else {
-        res.status(401).json({ message: 'Not authorized as a teacher' });
+        return res.status(401).json({ message: 'Not authorized as a teacher' });
     }
 };
 
 export const proctor = (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (req.user && (req.user.role === 'proctor' || req.user.role === 'admin')) {
-        next();
+    if (req.user && (req.user.role === 'proctor' || req.user.role === 'admin' || req.user.role === 'teacher')) {
+        return next();
     } else {
-        res.status(401).json({ message: 'Not authorized as a proctor' });
+        return res.status(401).json({ message: 'Not authorized as a proctor or teacher' });
     }
 };
 
 export const admin = (req: AuthRequest, res: Response, next: NextFunction) => {
     if (req.user && req.user.role === 'admin') {
-        next();
+        return next();
     } else {
-        res.status(401).json({ message: 'Not authorized as an admin' });
+        return res.status(401).json({ message: 'Not authorized as an admin' });
     }
 };

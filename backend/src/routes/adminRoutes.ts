@@ -1,6 +1,7 @@
 import express from 'express';
 import { protect, admin } from '../middleware/authMiddleware';
 import { getUsers, createUser, deleteUser, importUsers, exportUsers, getSystemStats, adminResetUserPassword } from '../controllers/adminController';
+import { getAIConfig, updateAIConfig } from '../controllers/systemConfigController';
 import multer from 'multer';
 import path from 'path';
 
@@ -49,5 +50,9 @@ router.route('/system')
 
 router.route('/users/:id/reset-password')
     .put(protect, admin, adminResetUserPassword);
+
+router.route('/config/ai')
+    .get(protect, admin, getAIConfig)
+    .put(protect, admin, updateAIConfig);
 
 export default router;

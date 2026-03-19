@@ -1,5 +1,6 @@
+import { useState, useEffect } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
-import { getCurrentUser } from '../../services/authService';
+import { getCurrentUser, getMaintenanceStatus } from '../../services/authService';
 
 interface ProtectedRouteProps {
     allowedRoles?: string[];
@@ -7,6 +8,39 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
     const user = getCurrentUser();
+    const [maintenance, setMaintenance] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const checkSystemStatus = async () => {
+            // Admins bypass maintenance mode checks entirely
+            if (user?.role === 'admin') {
+                setLoading(false);
+                return;
+            }
+
+            try {
+                const data = await getMaintenanceStatus();
+                setMaintenance(data.maintenanceMode);
+            } catch (error) {
+                console.error('Failed to fetch maintenance status:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        checkSystemStatus();
+    }, [user?.role]);
+
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+    );
+
+    if (maintenance && user?.role !== 'admin') {
+        return <Navigate to="/maintenance" replace />;
+    }
 
     if (!user) {
         // Not logged in, redirect to login

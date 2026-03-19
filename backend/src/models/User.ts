@@ -1,24 +1,48 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
-export interface IUser extends Document {
+export interface IBaseUser extends Document {
     name: string;
     email: string;
     password: string;
     role: 'student' | 'teacher' | 'admin' | 'proctor';
-    rollNo?: string;
     avatarUrl?: string;
     bio?: string;
     phoneNumber?: string;
-    groupId?: mongoose.Types.ObjectId;
-    subgroupId?: mongoose.Types.ObjectId;
     address?: string;
     institution?: string;
-    securityQuestions?: Array<{ question: string; answer: string }>;
     createdAt: Date;
     updatedAt: Date;
     matchPassword: (enteredPassword: string) => Promise<boolean>;
     matchSecurityAnswer: (answer: string, hashedAnswer: string) => Promise<boolean>;
+}
+
+export interface IStudent extends IBaseUser {
+    rollNo: string;
+    groupId: mongoose.Types.ObjectId;
+    subgroupId?: mongoose.Types.ObjectId;
+}
+
+export interface IStaff extends IBaseUser {
+    securityQuestions: Array<{ question: string; answer: string }>;
+    groupId?: mongoose.Types.ObjectId;
+    managedGroups: mongoose.Types.ObjectId[];
+    departmentProctors: Array<{ groupId: mongoose.Types.ObjectId; proctorId: mongoose.Types.ObjectId }>;
+}
+
+export interface ITeacher extends IStaff {
+    defaultProctorId?: mongoose.Types.ObjectId;
+}
+
+// Superset interface for general usage where the specific role might not be known
+export interface IUser extends IBaseUser {
+    rollNo?: string;
+    groupId?: mongoose.Types.ObjectId;
+    subgroupId?: mongoose.Types.ObjectId;
+    defaultProctorId?: mongoose.Types.ObjectId;
+    securityQuestions?: Array<{ question: string; answer: string }>;
+    managedGroups?: mongoose.Types.ObjectId[];
+    departmentProctors?: Array<{ groupId: mongoose.Types.ObjectId; proctorId: mongoose.Types.ObjectId }>;
 }
 
 const options = { discriminatorKey: 'role', timestamps: true };
@@ -93,9 +117,50 @@ const StaffSchema = new mongoose.Schema({
             answer: { type: String },
         },
     ],
+    managedGroups: [{ type: Schema.Types.ObjectId, ref: 'Group' }],
+    departmentProctors: [
+        {
+            groupId: { type: Schema.Types.ObjectId, ref: 'Group' },
+            proctorId: { type: Schema.Types.ObjectId, ref: 'User' },
+        },
+    ],
+    groupId: { type: Schema.Types.ObjectId, ref: 'Group' },
+    proctoringPresets: {
+        enableFaceDetection: { type: Boolean, default: true },
+        enableVoiceDetection: { type: Boolean, default: true },
+        enableGazeTracking: { type: Boolean, default: false },
+        enableTabLock: { type: Boolean, default: true },
+        enableFullscreen: { type: Boolean, default: true },
+        enableInputLock: { type: Boolean, default: true },
+        violationThreshold: { type: Number, default: 5 },
+        performanceSettings: {
+            gazeYawThreshold: { type: Number, default: 40 },
+            faceScoreThreshold: { type: Number, default: 0.45 },
+            audioRMSThreshold: { type: Number, default: 0.010 },
+            violationCooldownMs: { type: Number, default: 15000 }
+        }
+    }
 });
 
-export const Teacher = User.discriminator('teacher', StaffSchema);
+export const Teacher = User.discriminator('teacher', new mongoose.Schema({
+    defaultProctorId: { type: Schema.Types.ObjectId, ref: 'User' },
+    managedGroups: [{ type: Schema.Types.ObjectId, ref: 'Group' }],
+    proctoringPresets: {
+        enableFaceDetection: { type: Boolean, default: true },
+        enableVoiceDetection: { type: Boolean, default: true },
+        enableGazeTracking: { type: Boolean, default: false },
+        enableTabLock: { type: Boolean, default: true },
+        enableFullscreen: { type: Boolean, default: true },
+        enableInputLock: { type: Boolean, default: true },
+        violationThreshold: { type: Number, default: 5 },
+        performanceSettings: {
+            gazeYawThreshold: { type: Number, default: 40 },
+            faceScoreThreshold: { type: Number, default: 0.45 },
+            audioRMSThreshold: { type: Number, default: 0.010 },
+            violationCooldownMs: { type: Number, default: 15000 }
+        }
+    }
+}));
 export const Admin = User.discriminator('admin', StaffSchema);
 export const Proctor = User.discriminator('proctor', StaffSchema);
 

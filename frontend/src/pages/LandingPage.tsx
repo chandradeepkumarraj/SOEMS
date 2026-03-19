@@ -4,6 +4,8 @@ import Hero from '../components/landing/Hero';
 import FeatureCards from '../components/landing/FeatureCards';
 import ProctoringSection from '../components/landing/ProctoringSection';
 import AnalyticsSection from '../components/landing/AnalyticsSection';
+import EvolutionSection from '../components/landing/EvolutionSection';
+import DeepInsightsSection from '../components/landing/DeepInsightsSection';
 
 // Using a simplified Footer for now, could be its own component later
 const Footer = () => (
@@ -46,10 +48,6 @@ const Footer = () => (
             </div>
             <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-[9px] font-black uppercase tracking-[0.3em]">
                 <p>© {new Date().getFullYear()} Serverless Online Examination Protocol.</p>
-                <div className="flex gap-8">
-                    <span className="flex items-center gap-2 text-cyber-blue"><div className="h-1.5 w-1.5 rounded-full bg-cyber-blue shadow-glow-blue animate-pulse" /> V2.4.0 NODE_STABLE</span>
-                    <span className="flex items-center gap-2 text-cyber-green"><div className="h-1.5 w-1.5 rounded-full bg-cyber-green shadow-glow-green animate-pulse" /> GRID_ONLINE</span>
-                </div>
             </div>
         </div>
     </footer>
@@ -64,6 +62,8 @@ const LandingPage = () => {
             <main>
                 <Hero />
                 <FeatureCards />
+                <EvolutionSection />
+                <DeepInsightsSection />
                 <ProctoringSection />
                 <AnalyticsSection />
             </main>

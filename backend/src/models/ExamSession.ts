@@ -5,13 +5,28 @@ export interface IExamSession extends Document {
     examId: mongoose.Schema.Types.ObjectId;
     startTime: Date;
     lastSyncTime: Date;
-    answers: Map<string, number>; // questionId -> selectedOption
+    answers: Map<string, any>; // questionId -> selectedOption (number) or textAnswer (string)
     timeSpent: Map<string, number>; // questionId -> seconds
     flagged: Map<string, boolean>; // questionId -> boolean
     status: 'in-progress' | 'completed';
     isExpired: boolean;
     violationCount: number;
     isSuspended: boolean;
+    adaptiveState?: {
+        currentDifficulty: 'easy' | 'medium' | 'hard';
+        questionsServed: mongoose.Schema.Types.ObjectId[];
+        trailingCorrect: number;
+        trailingTotal: number;
+    };
+    evaluations?: Map<string, {
+        score: number;
+        isCorrect: boolean;
+        feedback: string;
+        missingConcepts: string[];
+        remediationSteps: string[];
+    }>;
+    idCardFront?: string;
+    idCardBack?: string;
 }
 
 const ExamSessionSchema: Schema = new Schema({
@@ -21,7 +36,7 @@ const ExamSessionSchema: Schema = new Schema({
     lastSyncTime: { type: Date, default: Date.now },
     answers: {
         type: Map,
-        of: Number,
+        of: Schema.Types.Mixed,
         default: {}
     },
     timeSpent: {
@@ -41,7 +56,26 @@ const ExamSessionSchema: Schema = new Schema({
     },
     isExpired: { type: Boolean, default: false },
     violationCount: { type: Number, default: 0 },
-    isSuspended: { type: Boolean, default: false }
+    isSuspended: { type: Boolean, default: false },
+    adaptiveState: {
+        currentDifficulty: { type: String, enum: ['easy', 'medium', 'hard'], default: 'medium' },
+        questionsServed: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Question' }],
+        trailingCorrect: { type: Number, default: 0 },
+        trailingTotal: { type: Number, default: 0 }
+    },
+    evaluations: {
+        type: Map,
+        of: {
+            score: Number,
+            isCorrect: Boolean,
+            feedback: String,
+            missingConcepts: [String],
+            remediationSteps: [String]
+        },
+        default: {}
+    },
+    idCardFront: { type: String },
+    idCardBack: { type: String }
 }, {
     timestamps: true
 });

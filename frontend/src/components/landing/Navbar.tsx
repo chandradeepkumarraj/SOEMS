@@ -24,6 +24,8 @@ const Navbar = () => {
 
     const navLinks = [
         { name: 'Features', href: '#features' },
+        { name: 'Evolution', href: '#evolution' },
+        { name: 'Insights', href: '#insights' },
         { name: 'Proctoring', href: '#proctoring' },
         { name: 'Analytics', href: '#analytics' }
     ];
@@ -62,12 +64,12 @@ const Navbar = () => {
                     </Link>
 
                     {/* Desktop Links */}
-                    <div className="hidden md:flex gap-8">
+                    <div className="hidden md:flex lg:gap-8 gap-4 px-2">
                         {navLinks.map((item) => (
                             <motion.a
                                 key={item.name}
                                 href={item.href}
-                                className="text-slate-300 hover:text-cyber-cyan transition-colors font-medium tracking-wide"
+                                className="text-slate-300 hover:text-cyber-cyan transition-colors font-medium tracking-wide lg:text-base text-sm whitespace-nowrap"
                                 whileHover={{ y: -2 }}
                             >
                                 {item.name}

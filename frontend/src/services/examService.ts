@@ -1,104 +1,101 @@
-import axios from 'axios';
-import { API_BASE_URL } from '../config';
+import apiClient from './apiClient';
 
-const API_URL = `${API_BASE_URL}/api/exams`;
-
-const getAuthHeader = () => {
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-        const user = JSON.parse(userStr);
-        return { Authorization: `Bearer ${user.token}` };
-    }
-    return {};
-};
+const API_URL = '/api/exams';
 
 export const createExam = async (examData: any) => {
-    const response = await axios.post(API_URL, examData, { headers: getAuthHeader() });
+    const response = await apiClient.post(API_URL, examData);
     return response.data;
 };
 
 export const updateExam = async (id: string, examData: any) => {
-    const response = await axios.put(`${API_URL}/${id}`, examData, { headers: getAuthHeader() });
+    const response = await apiClient.put(`${API_URL}/${id}`, examData);
     return response.data;
 };
 
 export const getExams = async () => {
-    const response = await axios.get(API_URL, { headers: getAuthHeader() });
+    const response = await apiClient.get(API_URL);
     return response.data;
 };
 
 export const getExamById = async (id: string) => {
-    const response = await axios.get(`${API_URL}/${id}`, { headers: getAuthHeader() });
+    const response = await apiClient.get(`${API_URL}/${id}`);
     return response.data;
 };
 
 export const deleteExam = async (id: string) => {
-    const response = await axios.delete(`${API_URL}/${id}`, { headers: getAuthHeader() });
+    const response = await apiClient.delete(`${API_URL}/${id}`);
     return response.data;
 };
 
 export const submitExam = async (id: string, answers: any[]) => {
-    const response = await axios.post(`${API_URL}/${id}/submit`, { answers }, { headers: getAuthHeader() });
+    const response = await apiClient.post(`${API_URL}/${id}/submit`, { answers });
     return response.data;
 };
 
 export const getExamStats = async (id: string) => {
-    const response = await axios.get(`${API_URL}/${id}/stats`, { headers: getAuthHeader() });
+    const response = await apiClient.get(`${API_URL}/${id}/stats`);
     return response.data;
 };
 
 export const getTeacherDashboardStats = async () => {
-    const response = await axios.get(`${API_URL}/teacher-stats`, { headers: getAuthHeader() });
+    const response = await apiClient.get(`${API_URL}/teacher-stats`);
     return response.data;
 };
 
 export const startExamSession = async (id: string) => {
-    const response = await axios.post(`${API_URL}/start/${id}`, {}, { headers: getAuthHeader() });
+    const response = await apiClient.post(`${API_URL}/start/${id}`, {});
     return response.data;
 };
 
-export const updateExamProgress = async (id: string, answers: any, timeSpent: any, flagged: any) => {
-    const response = await axios.post(`${API_URL}/progress/${id}`, { answers, timeSpent, flagged }, { headers: getAuthHeader() });
+export const updateExamProgress = async (id: string, answers: any, timeSpent: any, flagged: any, idCardFront?: string, idCardBack?: string) => {
+    const response = await apiClient.post(`${API_URL}/progress/${id}`, { answers, timeSpent, flagged, idCardFront, idCardBack });
     return response.data;
 };
+
 export const endExam = async (id: string) => {
-    const response = await axios.post(`${API_URL}/${id}/end`, {}, { headers: getAuthHeader() });
+    const response = await apiClient.post(`${API_URL}/${id}/end`, {});
     return response.data;
 };
 
 export const getExamAnalytics = async (id: string) => {
-    const response = await axios.get(`${API_URL}/${id}/analytics`, { headers: getAuthHeader() });
+    const response = await apiClient.get(`${API_URL}/${id}/analytics`);
     return response.data;
 };
 
-export const logViolation = async (id: string, violationData: { type: string, message: string }) => {
-    const response = await axios.post(`${API_URL}/${id}/violation`, violationData, { headers: getAuthHeader() });
-    return response.data;
+export const logViolation = async (examId: string, violation: { type: string, message: string, snapshot?: string, transcript?: string }) => {
+    try {
+        const response = await apiClient.post(`${API_URL}/${examId}/violation`, violation);
+        return response.data;
+    } catch (error: any) {
+        // If session is already suspended or finished, backend returns 403 or 404
+        // We return the error data if available, or a default object to prevent downstream crashes
+        console.warn('Violation logging rejected by server:', error.response?.data?.message || error.message);
+        return error.response?.data || { isSuspended: false, violationCount: 0 };
+    }
 };
 
 export const getExamViolations = async (id: string) => {
-    const response = await axios.get(`${API_URL}/${id}/violations`, { headers: getAuthHeader() });
+    const response = await apiClient.get(`${API_URL}/${id}/violations`);
     return response.data;
 };
 
 export const getGlobalProctorStats = async () => {
-    const response = await axios.get(`${API_URL}/proctor/global-stats`, { headers: getAuthHeader() });
+    const response = await apiClient.get(`${API_URL}/proctor/global-stats`);
     return response.data;
 };
 
 export const getActiveSessions = async (id: string) => {
-    const response = await axios.get(`${API_URL}/${id}/active-sessions`, { headers: getAuthHeader() });
+    const response = await apiClient.get(`${API_URL}/${id}/active-sessions`);
     return response.data;
 };
 
 export const getCheatingAnalysis = async () => {
-    const response = await axios.get(`${API_URL}/proctor/cheating-analysis`, { headers: getAuthHeader() });
+    const response = await apiClient.get(`${API_URL}/proctor/cheating-analysis`);
     return response.data;
 };
 
 export const downloadCheatingReport = async (id: string, examTitle: string) => {
-    const response = await axios.get(`${API_URL}/${id}/cheating-report`, {
-        headers: getAuthHeader(),
+    const response = await apiClient.get(`${API_URL}/${id}/cheating-report`, {
         responseType: 'blob'
     });
 
@@ -113,6 +110,46 @@ export const downloadCheatingReport = async (id: string, examTitle: string) => {
 };
 
 export const resumeStudentSession = async (examId: string, studentId: string) => {
-    const response = await axios.post(`${API_URL}/${examId}/resume/${studentId}`, {}, { headers: getAuthHeader() });
+    const response = await apiClient.post(`${API_URL}/${examId}/resume/${studentId}`, {});
+    return response.data;
+};
+
+export const resetExam = async (id: string, regenerateQuestions: boolean = false) => {
+    const response = await apiClient.post(`${API_URL}/${id}/reset`, { regenerateQuestions });
+    return response.data;
+};
+
+// === Adaptive C.A.T. API ===
+export const getNextAdaptiveQuestion = async (examId: string) => {
+    const response = await apiClient.get(`${API_URL}/${examId}/adaptive/next`);
+    return response.data;
+};
+
+export const submitAdaptiveAnswer = async (examId: string, questionId: string, selectedOption: number | null, textAnswer?: string) => {
+    const response = await apiClient.post(`${API_URL}/${examId}/adaptive/answer`, { questionId, selectedOption, textAnswer });
+    return response.data;
+};
+
+export const exportExamResults = async (id: string, examTitle: string) => {
+    const response = await apiClient.get(`${API_URL}/${id}/export`, {
+        responseType: 'blob'
+    });
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Exam_Results_${examTitle.replace(/\s+/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+};
+
+export const getAIClassInsight = async (id: string) => {
+    const response = await apiClient.get(`${API_URL}/${id}/ai-insight`);
+    return response.data;
+};
+
+export const getStudentViolations = async (examId: string, studentId: string) => {
+    const response = await apiClient.get(`${API_URL}/${examId}/violations/${studentId}`);
     return response.data;
 };

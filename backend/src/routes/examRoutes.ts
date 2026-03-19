@@ -16,9 +16,13 @@ import {
     getGlobalProctorStats,
     getCheatingAnalysis,
     downloadCheatingReport,
-    resumeStudentSession
+    resumeStudentSession,
+    getNextAdaptiveQuestion,
+    submitAdaptiveAnswer,
+    resetExam,
+    getStudentViolations
 } from '../controllers/examController';
-import { getExamStats, getTeacherDashboardStats } from '../controllers/examStatsController';
+import { getExamStats, getTeacherDashboardStats, exportExamResultsCSV, generateClassAIInsight } from '../controllers/examStatsController';
 import { protect, teacher, proctor, admin } from '../middleware/authMiddleware';
 
 const router = express.Router();
@@ -35,10 +39,16 @@ router.post('/:id/resume/:studentId', protect, proctor, resumeStudentSession);
 router.post('/start/:id', protect, startExam);
 router.post('/progress/:id', protect, updateSessionProgress);
 router.post('/:id/end', protect, teacher, endExam);
+router.post('/:id/reset', protect, teacher, resetExam);
 router.get('/:id/analytics', protect, teacher, getExamAnalytics);
 router.post('/:id/violation', protect, logViolation);
 router.get('/:id/violations', protect, proctor, getExamViolations);
+router.get('/:id/violations/:studentId', protect, proctor, getStudentViolations);
 router.get('/:id/active-sessions', protect, proctor, getActiveSessions);
+
+// Adaptive C.A.T. Routes
+router.get('/:id/adaptive/next', protect, getNextAdaptiveQuestion);
+router.post('/:id/adaptive/answer', protect, submitAdaptiveAnswer);
 
 router.route('/teacher-stats')
     .get(protect, getTeacherDashboardStats);
@@ -50,6 +60,9 @@ router.route('/:id')
 
 router.route('/:id/stats')
     .get(protect, getExamStats);
+
+router.get('/:id/export', protect, teacher, exportExamResultsCSV);
+router.get('/:id/ai-insight', protect, teacher, generateClassAIInsight);
 
 router.route('/:id/submit')
     .post(protect, submitExam);

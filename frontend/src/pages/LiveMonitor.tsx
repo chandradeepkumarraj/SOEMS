@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Socket } from 'socket.io-client';
 import { getSocket } from '../services/socket';
 import {
@@ -11,8 +11,8 @@ import { Link } from 'react-router-dom';
 import { getExams, getActiveSessions, getCheatingAnalysis, downloadCheatingReport, resumeStudentSession } from '../services/examService';
 
 // Audio alert for new violations
-const ALERT_SOUND = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-ALERT_SOUND.volume = 0.4;
+const ALERT_SOUND = new Audio('/assets/sounds/notify_sound.mp3');
+ALERT_SOUND.volume = 0.6;
 
 interface Violation {
     type: string;
@@ -59,6 +59,7 @@ export default function LiveMonitor() {
     const [runningExams, setRunningExams] = useState<any[]>([]);
     const [selectedExamId, setSelectedExamId] = useState<string>('all');
     const [loadingExams, setLoadingExams] = useState(true);
+    const [examSearch, setExamSearch] = useState('');
 
     // New Analytics State
     const [activeTab, setActiveTab] = useState<'live' | 'analytics'>('live');
@@ -123,12 +124,7 @@ export default function LiveMonitor() {
         const loadExams = async () => {
             try {
                 const allExams = await getExams();
-                // Sort by date descending (LIFO) and filter for ongoing/scheduled
-                const sorted = allExams
-                    .filter((e: any) => e.status === 'published' || e.status === 'scheduled')
-                    .sort((a: any, b: any) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
-
-                setRunningExams(sorted);
+                setRunningExams(allExams.filter((e: any) => e.status !== 'draft'));
                 setLoadingExams(false);
             } catch (err) {
                 console.error('Failed to load exams:', err);
@@ -136,6 +132,16 @@ export default function LiveMonitor() {
         };
         loadExams();
     }, []);
+
+    const ongoingExams = useMemo(() => {
+        const now = new Date();
+        return runningExams.filter(e => e.status === 'published' && new Date(e.endTime) > now && e.title.toLowerCase().includes(examSearch.toLowerCase()));
+    }, [runningExams, examSearch]);
+
+    const historicalExams = useMemo(() => {
+        const now = new Date();
+        return runningExams.filter(e => (e.status === 'closed' || e.status === 'archived' || (e.status === 'published' && new Date(e.endTime) <= now)) && e.title.toLowerCase().includes(examSearch.toLowerCase()));
+    }, [runningExams, examSearch]);
 
     useEffect(() => {
         if (activeTab === 'live') {
@@ -204,7 +210,7 @@ export default function LiveMonitor() {
     };
 
     const updateSession = (studentId: string, examId: string, status: StudentSession['status'], alertType?: string, alertMessage?: string, studentName?: string, rollNo?: string, isSuspended?: boolean) => {
-        if (alertType) {
+        if (alertType && alertType !== 'RESUMED') {
             ALERT_SOUND.play().catch(() => { }); // Play soft alert on new violation
         }
 
@@ -310,20 +316,43 @@ export default function LiveMonitor() {
                     {/* Control Panel */}
                     <div className="lg:col-span-12 flex justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-2xl border border-neutral-200 dark:border-slate-800 shadow-sm mb-2">
                         <div className="flex items-center gap-6">
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-black text-neutral-400 dark:text-slate-500 uppercase tracking-widest mb-1">Focus Exam Room</span>
-                                <select
-                                    className="bg-neutral-50 dark:bg-slate-800 border border-neutral-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm font-bold focus:ring-4 focus:ring-primary/10 select-none outline-none min-w-[280px] dark:text-slate-100"
-                                    value={selectedExamId}
-                                    onChange={(e) => setSelectedExamId(e.target.value)}
-                                    disabled={loadingExams}
-                                >
-                                    <option value="all">🌐 Global (All Running Exams)</option>
-                                    {!loadingExams && runningExams.map(exam => (
-                                        <option key={exam._id} value={exam._id}>📝 {exam.title}</option>
-                                    ))}
-                                </select>
-                            </div>
+                                <div className="flex flex-col gap-2">
+                                    <span className="text-[10px] font-black text-neutral-400 dark:text-slate-500 uppercase tracking-widest mb-1">Focus Exam Room</span>
+                                    <div className="flex flex-col md:flex-row items-center gap-3">
+                                        <div className="relative group/search min-w-[240px]">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none group-focus-within/search:text-primary transition-colors" />
+                                            <input
+                                                type="text"
+                                                placeholder="Search Exam Name..."
+                                                value={examSearch}
+                                                onChange={(e) => setExamSearch(e.target.value)}
+                                                className="w-full bg-neutral-50 dark:bg-slate-800 border border-neutral-200 dark:border-slate-700 rounded-xl py-2 pl-10 pr-4 text-xs font-bold text-slate-700 dark:text-white outline-none focus:ring-4 focus:ring-primary/10 transition-all shadow-sm"
+                                            />
+                                        </div>
+                                        <select
+                                            className="bg-neutral-50 dark:bg-slate-800 border border-neutral-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm font-bold focus:ring-4 focus:ring-primary/10 select-none outline-none min-w-[280px] dark:text-slate-100 appearance-none cursor-pointer hover:border-primary/50 transition-colors"
+                                            value={selectedExamId}
+                                            onChange={(e) => setSelectedExamId(e.target.value)}
+                                            disabled={loadingExams}
+                                        >
+                                            <option value="all">🌐 Global (All Running Exams)</option>
+                                            {!loadingExams && ongoingExams.length > 0 && (
+                                                <optgroup label="Published Exams (Ongoing)">
+                                                    {ongoingExams.map(exam => (
+                                                        <option key={exam._id} value={exam._id}>📝 {exam.title}</option>
+                                                    ))}
+                                                </optgroup>
+                                            )}
+                                            {!loadingExams && historicalExams.length > 0 && (
+                                                <optgroup label="Historical/Ended Exams">
+                                                    {historicalExams.map(exam => (
+                                                        <option key={exam._id} value={exam._id}>📁 {exam.title} (Ended)</option>
+                                                    ))}
+                                                </optgroup>
+                                            )}
+                                        </select>
+                                    </div>
+                                </div>
 
                             <div className="h-10 w-[1px] bg-neutral-100 dark:bg-slate-800 hidden md:block"></div>
 
@@ -353,87 +382,87 @@ export default function LiveMonitor() {
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                                 {filteredSessions.map(session => (
-                                    <div key={session.studentId} className={`group bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 border-2 shadow-sm hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 relative overflow-hidden ${session.status === 'alert' ? 'border-red-500 ring-4 ring-red-500/10' : session.status === 'submitted' ? 'border-green-500' : 'border-blue-500'}`}>
-                                        <div className="flex justify-between items-start mb-6">
-                                            <div className="flex items-center gap-4">
-                                                <div className={`p-4 rounded-2xl shadow-inner ${session.status === 'alert' ? 'bg-red-50 dark:bg-red-950/30 text-red-500 dark:text-red-400' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
-                                                    <User className="h-6 w-6" />
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-black text-slate-900 dark:text-slate-100 text-lg leading-tight">{session.name || "Student"}</h4>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">RNO: {session.rollNo || 'N/A'}</span>
-                                                        <span className="text-[10px] font-bold text-slate-300 dark:text-slate-600">ID: {session.studentId.slice(-6).toUpperCase()}</span>
+                                    <div key={session.studentId} className={`group bg-white dark:bg-slate-900 rounded-2xl p-4 border shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden h-fit ${session.isSuspended ? 'border-red-500 ring-4 ring-red-500/10' : session.status === 'alert' ? 'border-orange-500 ring-4 ring-orange-500/10' : 'border-slate-100 dark:border-slate-800 hover:border-blue-500'}`}>
+                                        <div className="flex flex-col gap-3 relative z-10 text-left">
+                                            {/* Header: Identity & Alert */}
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 shadow-inner ${session.status === 'alert' || session.isSuspended ? 'bg-red-50 dark:bg-red-950/30 text-red-500' : 'bg-slate-50 dark:bg-slate-800 text-primary dark:text-blue-400'}`}>
+                                                        {session.name ? session.name.charAt(0) : <User className="h-5 w-5" />}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <h4 className="font-extrabold text-slate-900 dark:text-slate-100 text-sm uppercase truncate leading-none mb-1.5" title={session.name}>{session.name || "Student"}</h4>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-100 dark:border-slate-800">RNO: {session.rollNo || 'N/A'}</span>
+                                                            <span className="text-[8px] font-bold text-slate-300 dark:text-slate-600">ID: {session.studentId.slice(-4).toUpperCase()}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            {session.status === 'alert' && <div className="h-3 w-3 bg-red-500 rounded-full animate-ping shadow-[0_0_15px_rgba(239,68,68,0.8)]" />}
-                                        </div>
-
-                                        <div className="flex flex-wrap items-center gap-2 mb-6">
-                                            <span className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-tighter shadow-sm ${session.isSuspended ? 'bg-red-600 text-white' : session.status === 'alert' ? 'bg-red-500 text-white' : session.status === 'submitted' ? 'bg-green-100 dark:bg-green-950/30 text-green-600 dark:text-green-400' : 'bg-blue-100 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400'}`}>
-                                                {session.isSuspended ? 'SUSPENDED' : session.status}
-                                            </span>
-                                            {session.totalViolations > 0 && (
-                                                <span className="bg-neutral-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[10px] px-3 py-1 rounded-xl font-black tracking-tighter flex items-center gap-1">
-                                                    <AlertTriangle className="h-3 w-3 text-red-500" />
-                                                    {session.totalViolations} INCIDENTS
-                                                </span>
-                                            )}
-                                            {session.isSuspended && (
-                                                <button
-                                                    onClick={() => handleResume(session.examId, session.studentId)}
-                                                    className="ml-auto bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] px-4 py-1.5 rounded-xl font-black flex items-center gap-2 transition-all shadow-lg hover:shadow-emerald-500/20 active:scale-95"
-                                                >
-                                                    <Activity className="h-3 w-3" /> RESUME SESSION
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        <div className="bg-slate-50 dark:bg-slate-800/40 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/60">
-                                            <div className="flex justify-between items-center mb-3">
-                                                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Incident Breakdown</p>
-                                                {Object.keys(session.violationCounts).length === 0 && <ShieldCheck className="h-4 w-4 text-emerald-500" />}
+                                                {(session.status === 'alert' || session.isSuspended) && (
+                                                    <div className="flex flex-col items-end gap-1">
+                                                        <div className="flex items-center gap-1">
+                                                            <div className="h-1.5 w-1.5 bg-red-500 rounded-full animate-pulse" />
+                                                            <span className="text-[8px] font-black text-red-500 uppercase tracking-widest">LIVE ALERT</span>
+                                                        </div>
+                                                        <span className="bg-red-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter">ALERT</span>
+                                                    </div>
+                                                )}
                                             </div>
 
-                                            {Object.keys(session.violationCounts).length > 0 ? (
-                                                <div className="flex flex-wrap gap-2">
-                                                    {Object.keys(session.violationCounts).map(type => (
-                                                        <div key={type} className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2.5 py-1.5 rounded-xl shadow-sm">
-                                                            <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                                                            <span className="text-[9px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-tight">{type}</span>
-                                                            <span className="text-[10px] font-black text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 px-1.5 rounded-md">{session.violationCounts[type]}</span>
-                                                        </div>
-                                                    ))}
+                                            {/* Breakdown: Concise Indicator */}
+                                            <div className={`rounded-xl p-3 border transition-colors ${Object.keys(session.violationCounts).length > 0 ? 'bg-red-50/50 dark:bg-red-950/10 border-red-100 dark:border-red-900/30' : 'bg-slate-50/50 dark:bg-slate-800/40 border-slate-100 dark:border-slate-800'}`}>
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Incident Breakdown</span>
+                                                    {Object.keys(session.violationCounts).length === 0 ? <ShieldCheck className="h-3 w-3 text-emerald-500" /> : <ShieldAlert className="h-3 w-3 text-red-500" />}
                                                 </div>
-                                            ) : (
-                                                <div className="py-2 flex items-center gap-3">
-                                                    <div className="h-1 w-12 bg-emerald-400 rounded-full" />
-                                                    <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Session Clean</span>
-                                                </div>
-                                            )}
-                                        </div>
 
-                                        {session.violations.length > 0 && (
-                                            <div className="space-y-2 mt-6 max-h-40 overflow-y-auto thin-scrollbar pr-1 border-t border-slate-50 dark:border-slate-800 pt-5">
-                                                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Timeline Events</p>
-                                                {session.violations.map((v, i) => (
-                                                    <div key={i} className="flex gap-3 group/item">
-                                                        <div className="flex flex-col items-center gap-1">
-                                                            <div className="h-2 w-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)] mt-1" />
-                                                            {i !== session.violations.length - 1 && <div className="w-[1.5px] flex-1 bg-slate-100 dark:bg-slate-800" />}
-                                                        </div>
-                                                        <div className="flex-1 pb-4">
-                                                            <div className="flex justify-between items-center mb-1">
-                                                                <span className="text-[9px] font-black text-red-600 dark:text-red-400 uppercase tabular-nums">{v.type}</span>
-                                                                <span className="text-[8px] font-bold text-slate-300 dark:text-slate-600 tabular-nums">{v.timestamp}</span>
+                                                {Object.keys(session.violationCounts).length > 0 ? (
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {Object.keys(session.violationCounts).map(type => (
+                                                            <div key={type} className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 px-2 py-1 rounded-lg">
+                                                                <span className="text-[8px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tight">{type}</span>
+                                                                <span className="text-[10px] font-black text-red-600">{session.violationCounts[type]}</span>
                                                             </div>
-                                                            <p className="text-[10px] text-slate-600 dark:text-slate-400 font-medium leading-[1.4] opacity-80 group-hover/item:opacity-100 transition-opacity italic">"{v.message}"</p>
-                                                        </div>
+                                                        ))}
                                                     </div>
-                                                ))}
+                                                ) : (
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-1 w-12 bg-emerald-500 rounded-full" />
+                                                        <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Session Clean</span>
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
+
+                                            {/* Footer: Status & Resume */}
+                                            <div className="flex items-center justify-between gap-3 pt-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter shadow-sm ${session.isSuspended ? 'bg-red-600 text-white' : session.status === 'alert' ? 'bg-red-500 text-white' : 'bg-blue-100 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400'}`}>
+                                                        {session.isSuspended ? 'SUSPENDED' : session.status}
+                                                    </span>
+                                                    <Link
+                                                        to={`/admin/monitor/${session.examId}/${session.studentId}`}
+                                                        className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                                                        title="View Detail Timeline"
+                                                    >
+                                                        <Activity className="h-3 w-3 text-slate-600 dark:text-slate-400" />
+                                                    </Link>
+                                                    {session.totalViolations > 0 && (
+                                                        <span className="text-[10px] font-black text-slate-500 flex items-center gap-1">
+                                                            <AlertTriangle className="h-3 w-3 text-red-500" />
+                                                            {session.totalViolations}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {session.isSuspended && (
+                                                    <button
+                                                        onClick={() => handleResume(session.examId, session.studentId)}
+                                                        className="bg-emerald-500 hover:bg-emerald-600 text-white text-[8px] px-3 py-1.5 rounded-lg font-black transition-all active:scale-95 shadow-md shadow-emerald-500/10"
+                                                    >
+                                                        RESUME SESSION
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 ))}
                             </div>

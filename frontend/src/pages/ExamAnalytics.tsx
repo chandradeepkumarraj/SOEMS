@@ -2,16 +2,22 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Users, Clock, CheckCircle2, AlertCircle, ArrowLeft, RefreshCw, StopCircle, Trophy, Target, Zap, TrendingUp, BarChart3, Medal, CheckCircle } from 'lucide-react';
+import { Users, Clock, CheckCircle2, AlertCircle, ArrowLeft, RefreshCw, StopCircle, Trophy, Target, Zap, TrendingUp, BarChart3, Medal, CheckCircle, Layers } from 'lucide-react';
 import { Button } from '../components/ui/Button';
-import { getExamAnalytics, endExam } from '../services/examService';
+import { getExamAnalytics, endExam, exportExamResults, getAIClassInsight } from '../services/examService';
+import { Download, Sparkles } from 'lucide-react';
+import { useAIStatus } from '../hooks/useAIStatus';
 
 export default function ExamAnalytics() {
     const { examId } = useParams<{ examId: string }>();
     const [analytics, setAnalytics] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [aiInsight, setAiInsight] = useState<string | null>(null);
+    const [loadingInsight, setLoadingInsight] = useState(false);
+    const [exporting, setExporting] = useState(false);
 
+    const { getModelDisplayName } = useAIStatus();
     const fetchAnalytics = async (isRefresh = false) => {
         if (!examId) return;
         if (isRefresh) setRefreshing(true);
@@ -45,6 +51,33 @@ export default function ExamAnalytics() {
         } catch (error) {
             console.error('Failed to end exam:', error);
             alert('Failed to end exam');
+        }
+    };
+
+    const handleExportCSV = async () => {
+        if (!examId || !analytics) return;
+        setExporting(true);
+        try {
+            await exportExamResults(examId, analytics.title);
+        } catch (error) {
+            console.error('Export failed:', error);
+            alert('Failed to export CSV results');
+        } finally {
+            setExporting(false);
+        }
+    };
+
+    const fetchAIInsight = async () => {
+        if (!examId) return;
+        setLoadingInsight(true);
+        try {
+            const data = await getAIClassInsight(examId);
+            setAiInsight(data.narrative);
+        } catch (error) {
+            console.error('AI Insight failed:', error);
+            alert('Failed to generate AI insight');
+        } finally {
+            setLoadingInsight(false);
         }
     };
 
@@ -98,6 +131,15 @@ export default function ExamAnalytics() {
                     </div>
 
                     <div className="flex items-center gap-3">
+                        <Button
+                            variant="outline"
+                            onClick={handleExportCSV}
+                            disabled={exporting}
+                            className="bg-white"
+                        >
+                            <Download className={`h-4 w-4 mr-2 ${exporting ? 'animate-pulse' : ''}`} />
+                            {exporting ? 'Exporting...' : 'Export CSV'}
+                        </Button>
                         <Button
                             variant="outline"
                             onClick={() => fetchAnalytics(true)}
@@ -320,6 +362,64 @@ export default function ExamAnalytics() {
                     </motion.div>
                 </div>
 
+                {/* AI Pedagogical Insight */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.25 }}
+                    className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-indigo-100 dark:border-indigo-900/30 overflow-hidden mb-8"
+                >
+                    <div className="bg-gradient-to-r from-indigo-600 to-primary p-6 flex items-center justify-between text-white">
+                        <div className="flex items-center gap-3">
+                            <Sparkles className="h-6 w-6 text-indigo-200" />
+                            <div>
+                                <h2 className="text-xl font-bold">AI Teacher Assistant</h2>
+                                <p className="text-xs text-indigo-100 uppercase tracking-widest font-bold">{getModelDisplayName()} Pedagogical Intelligence</p>
+                            </div>
+                        </div>
+                        {!aiInsight && (
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={fetchAIInsight}
+                                disabled={loadingInsight}
+                                className="bg-white/10 hover:bg-white/20 text-white border-none"
+                            >
+                                {loadingInsight ? 'Analyzing...' : 'Generate Insight'}
+                            </Button>
+                        )}
+                    </div>
+                    <div className="p-8">
+                        {loadingInsight ? (
+                            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                                <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                <p className="text-slate-500 font-medium italic">Deconstructing student performance patterns...</p>
+                            </div>
+                        ) : aiInsight ? (
+                            <div className="prose prose-indigo dark:prose-invert max-w-none">
+                                <div className="text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line text-sm bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
+                                    {aiInsight}
+                                </div>
+                                <div className="mt-6 flex justify-end">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-[10px] uppercase font-bold tracking-widest text-slate-400 hover:text-primary"
+                                        onClick={() => setAiInsight(null)}
+                                    >
+                                        Dismiss
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center py-12">
+                                <p className="text-slate-400 text-sm mb-4">Click "Generate Insight" to analyze class-wide trends using AI.</p>
+                                <Sparkles className="h-12 w-12 text-slate-200 mx-auto opacity-50" />
+                            </div>
+                        )}
+                    </div>
+                </motion.div>
+
                 {/* Charts Section */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                     {/* Accuracy Chart */}
@@ -328,7 +428,7 @@ export default function ExamAnalytics() {
                             <Target className="h-5 w-5 text-primary" /> Accuracy per Question
                         </h2>
                         <div className="h-[300px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={100}>
                                 <BarChart data={analytics.questionAnalysis}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-gray-100 dark:text-slate-800" />
                                     <XAxis
@@ -368,7 +468,7 @@ export default function ExamAnalytics() {
                             <BarChart3 className="h-5 w-5 text-purple-600" /> Score Distribution
                         </h2>
                         <div className="h-[300px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={100}>
                                 <BarChart data={analytics.scoreDistribution}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-gray-100 dark:text-slate-800" />
                                     <XAxis
@@ -396,6 +496,44 @@ export default function ExamAnalytics() {
                         </div>
                     </div>
                 </div>
+
+                {/* Adaptive Stats Section */}
+                {analytics.isAdaptive && analytics.adaptiveStats && (
+                    <div className="bg-[var(--card-bg)] p-8 rounded-3xl shadow-[var(--shadow-main)] border border-[var(--border-main)] transition-colors mb-8">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100 flex items-center gap-2">
+                                <Layers className="h-5 w-5 text-indigo-600" /> Adaptive Question Pool Distribution
+                            </h2>
+                            <div className="mt-2 sm:mt-0 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800/30">
+                                <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest block mb-1">Avg. Questions Per Student</span>
+                                <span className="text-lg font-black text-indigo-900 dark:text-indigo-100">
+                                    {(analytics.adaptiveStats.averageQuestionsPerStudent || 0).toFixed(1)} <span className="text-sm font-medium text-indigo-400">questions</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div className="h-[300px] w-full">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} debounce={100}>
+                                <BarChart
+                                    data={[
+                                        { name: 'Easy', correct: analytics.adaptiveStats.easy.correct, incorrect: analytics.adaptiveStats.easy.total - analytics.adaptiveStats.easy.correct },
+                                        { name: 'Medium', correct: analytics.adaptiveStats.medium.correct, incorrect: analytics.adaptiveStats.medium.total - analytics.adaptiveStats.medium.correct },
+                                        { name: 'Hard', correct: analytics.adaptiveStats.hard.correct, incorrect: analytics.adaptiveStats.hard.total - analytics.adaptiveStats.hard.correct }
+                                    ]}
+                                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                    <XAxis dataKey="name" tick={{ fill: '#64748b' }} />
+                                    <YAxis tick={{ fill: '#64748b' }} />
+                                    <Tooltip
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                                    />
+                                    <Bar dataKey="correct" stackId="a" fill="#10b981" name="Correct" radius={[0, 0, 4, 4]} />
+                                    <Bar dataKey="incorrect" stackId="a" fill="#ef4444" name="Incorrect" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                )}
 
                 {/* Progress Visualization */}
                 <div className="bg-[var(--card-bg)] p-8 rounded-3xl shadow-[var(--shadow-main)] border border-[var(--border-main)] overflow-hidden relative transition-colors">

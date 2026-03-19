@@ -9,6 +9,8 @@ import mongoose from 'mongoose';
 import Result from '../models/Result';
 import ExamSession from '../models/ExamSession';
 import Violation from '../models/Violation';
+import Exam from '../models/Exam';
+import Question from '../models/Question';
 
 // @desc    Get all users
 // @route   GET /api/admin/users
@@ -27,7 +29,23 @@ export const getUsers = async (req: Request, res: Response) => {
 // @access  Private (Admin)
 export const createUser = async (req: Request, res: Response) => {
     try {
-        const { name, email, password, role, rollNo, phoneNumber, groupId, subgroupId } = req.body;
+        const schema = z.object({
+            name: z.string().min(2),
+            email: z.string().email(),
+            password: z.string().min(6),
+            role: z.enum(['student', 'teacher', 'admin', 'proctor']).default('student'),
+            rollNo: z.string().regex(/^\d{13}$/, "Roll No must be exactly 13 digits").optional(),
+            phoneNumber: z.string().regex(/^\d{10}$/, "Phone number must be exactly 10 digits").optional(),
+            groupId: z.string().optional(),
+            subgroupId: z.string().optional()
+        });
+
+        const validation = schema.safeParse(req.body);
+        if (!validation.success) {
+            return res.status(400).json({ message: 'Validation Failed', details: validation.error.errors });
+        }
+
+        const { name, email, password, role, rollNo, phoneNumber, groupId, subgroupId } = validation.data;
 
         const userExists = await User.findOne({
             $or: [
@@ -80,6 +98,12 @@ export const deleteUser = async (req: Request, res: Response) => {
             await Result.deleteMany({ studentId: user._id });
             await ExamSession.deleteMany({ studentId: user._id });
             await Violation.deleteMany({ studentId: user._id });
+
+            // If user is a teacher, delete their created content
+            if (user.role === 'teacher') {
+                await Exam.deleteMany({ creatorId: user._id });
+                await Question.deleteMany({ creatorId: user._id });
+            }
 
             await user.deleteOne();
             res.json({ message: 'User and all associated data removed' });

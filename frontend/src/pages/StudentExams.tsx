@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // No Link needed if using Button navigate
+import { useNavigate } from 'react-router-dom';
 import { getExams } from '../services/examService';
+import { getMyResultForExam } from '../services/resultService';
 import { Search, Clock, Calendar, ArrowRight, FileText } from 'lucide-react';
+
 import { Button } from '../components/ui/Button';
 import { motion } from 'framer-motion';
+
 
 export default function StudentExams() {
     const navigate = useNavigate();
@@ -11,24 +14,37 @@ export default function StudentExams() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
 
+    const refreshData = async () => {
+        try {
+            const data = await getExams();
+            setExams(data.filter((e: any) => e.status === 'published'));
+        } catch (error) {
+            console.error('Failed to fetch exams:', error);
+        }
+    };
+
     useEffect(() => {
-        const fetchExams = async () => {
-            try {
-                const data = await getExams();
-                // Filter for published regular exams
-                setExams(data.filter((e: any) => e.status === 'published'));
-            } catch (error) {
-                console.error('Failed to fetch exams:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchExams();
+        setLoading(true);
+        refreshData().finally(() => setLoading(false));
     }, []);
 
     const filteredExams = exams.filter(exam =>
         exam.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const handleViewResults = async (examId: string) => {
+        try {
+            const result = await getMyResultForExam(examId);
+            if (result && result._id) {
+                navigate(`/results/${result._id}`);
+            } else {
+                alert('Could not find result for this exam.');
+            }
+        } catch (error: any) {
+            console.error('Failed to fetch result:', error);
+            alert(error.response?.data?.message || 'Failed to open results.');
+        }
+    };
 
     return (
         <div className="space-y-8">
@@ -65,77 +81,86 @@ export default function StudentExams() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredExams.map((exam, index) => (
-                        <motion.div
-                            key={exam._id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="group bg-white dark:bg-slate-900 rounded-xl shadow-sm hover:shadow-md border border-gray-200 dark:border-slate-800 hover:border-primary/50 transition-all duration-300 overflow-hidden flex flex-col"
-                        >
-                            <div className="p-6 flex-1">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="h-12 w-12 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl font-bold group-hover:scale-110 transition-transform duration-300">
-                                        {exam.title.charAt(0)}
+                    {filteredExams.map((exam, index) => {
+                        const isUpcoming = new Date() < new Date(exam.startTime);
+                        const isExpired = new Date() > new Date(exam.endTime);
+
+                        return (
+                            <motion.div
+                                key={exam._id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.1 }}
+                                className="group bg-white dark:bg-slate-900 rounded-xl shadow-sm hover:shadow-md border border-gray-200 dark:border-slate-800 hover:border-primary/50 transition-all duration-300 overflow-hidden flex flex-col"
+                            >
+                                <div className="p-6 flex-1">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="h-12 w-12 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl font-bold group-hover:scale-110 transition-transform duration-300">
+                                            {exam.title.charAt(0)}
+                                        </div>
+                                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${exam.studentStatus === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                            exam.studentStatus === 'in-progress' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                                isUpcoming ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                                    isExpired ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                                        'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                            }`}>
+                                            {exam.studentStatus === 'completed' ? 'Completed' :
+                                                exam.studentStatus === 'in-progress' ? 'In Progress' :
+                                                    isUpcoming ? 'Upcoming' :
+                                                        isExpired ? 'Expired' :
+                                                            'Active'}
+                                        </span>
                                     </div>
-                                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${exam.studentStatus === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                        exam.studentStatus === 'in-progress' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                            new Date() < new Date(exam.startTime) ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                                                new Date() > new Date(exam.endTime) ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                                                    'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                        }`}>
-                                        {exam.studentStatus === 'completed' ? 'Completed' :
-                                            exam.studentStatus === 'in-progress' ? 'In Progress' :
-                                                new Date() < new Date(exam.startTime) ? 'Upcoming' :
-                                                    new Date() > new Date(exam.endTime) ? 'Expired' :
-                                                        'Active'}
-                                    </span>
+
+                                    <h3 className="text-lg font-black text-slate-900 dark:text-slate-100 mb-2 group-hover:text-primary transition-colors uppercase tracking-tight">
+                                        {exam.title}
+                                    </h3>
+                                    <p className="text-sm text-slate-900 dark:text-slate-400 font-bold leading-relaxed line-clamp-2 mb-4">
+                                        {exam.description || 'Secure session: No additional metadata provided.'}
+                                    </p>
+
+                                    <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                        <div className="flex items-center text-xs text-slate-900 dark:text-slate-300 font-black uppercase tracking-widest">
+                                            <Clock className="h-4 w-4 mr-2 text-primary" />
+                                            Duration: {exam.duration} Minutes
+                                        </div>
+                                        <div className="flex items-center text-xs text-slate-900 dark:text-slate-300 font-black uppercase tracking-widest">
+                                            <Calendar className="h-4 w-4 mr-2 text-primary" />
+                                            Launch: {new Date(exam.startTime).toLocaleDateString()}
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <h3 className="text-lg font-black text-slate-900 dark:text-slate-100 mb-2 group-hover:text-primary transition-colors uppercase tracking-tight">
-                                    {exam.title}
-                                </h3>
-                                <p className="text-sm text-slate-900 dark:text-slate-400 font-bold leading-relaxed line-clamp-2 mb-4">
-                                    {exam.description || 'Secure session: No additional metadata provided.'}
-                                </p>
-
-                                <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-                                    <div className="flex items-center text-xs text-slate-900 dark:text-slate-300 font-black uppercase tracking-widest">
-                                        <Clock className="h-4 w-4 mr-2 text-primary" />
-                                        Duration: {exam.duration} Minutes
-                                    </div>
-                                    <div className="flex items-center text-xs text-slate-900 dark:text-slate-300 font-black uppercase tracking-widest">
-                                        <Calendar className="h-4 w-4 mr-2 text-primary" />
-                                        Launch: {new Date(exam.startTime).toLocaleDateString()}
-                                    </div>
+                                <div className="p-4 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-slate-800">
+                                    {exam.studentStatus === 'completed' ? (
+                                        <Button
+                                            className="w-full justify-center bg-green-600 hover:bg-green-700 font-black uppercase tracking-widest"
+                                            onClick={() => handleViewResults(exam._id)}
+                                            disabled={!exam.resultsPublished}
+                                        >
+                                            {exam.resultsPublished ? 'View Results' : 'Results Pending'}
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            className={`w-full justify-center border-none shadow-lg transition-all font-black uppercase tracking-widest ${exam.studentStatus === 'in-progress'
+                                                ? 'bg-primary hover:bg-primary-dark shadow-primary/20'
+                                                : 'bg-slate-900 dark:bg-slate-100 dark:text-slate-900 hover:bg-black dark:hover:bg-white shadow-slate-900/10'
+                                                }`}
+                                            onClick={() => navigate(`/exam/${exam._id}`)}
+                                            disabled={isExpired}
+                                        >
+                                            {exam.studentStatus === 'in-progress'
+                                                ? 'Resume Exam'
+                                                : isUpcoming
+                                                    ? 'Go to Exam Hall'
+                                                    : 'Start Exam'}
+                                            <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                                        </Button>
+                                    )}
                                 </div>
-                            </div>
-
-                            <div className="p-4 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-slate-800">
-                                {exam.studentStatus === 'completed' ? (
-                                    <Button
-                                        className="w-full justify-center bg-green-600 hover:bg-green-700"
-                                        onClick={() => navigate(`/results/${exam._id}`)}
-                                        disabled={!exam.resultsPublished}
-                                    >
-                                        {exam.resultsPublished ? 'View Results' : 'Results Pending'}
-                                    </Button>
-                                ) : (
-                                    <Button
-                                        className={`w-full justify-center border-none shadow-lg transition-all ${exam.studentStatus === 'in-progress'
-                                            ? 'bg-primary hover:bg-primary-dark shadow-primary/20'
-                                            : 'bg-slate-900 dark:bg-slate-100 dark:text-slate-900 hover:bg-black dark:hover:bg-white shadow-slate-900/10'
-                                            }`}
-                                        onClick={() => navigate(`/exam/${exam._id}`)}
-                                        disabled={new Date() > new Date(exam.endTime)}
-                                    >
-                                        {exam.studentStatus === 'in-progress' ? 'Resume Exam' : 'Start Exam'}
-                                        <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                                    </Button>
-                                )}
-                            </div>
-                        </motion.div>
-                    ))}
+                            </motion.div>
+                        );
+                    })}
                 </div>
             )}
         </div>

@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import Result from '../models/Result';
 import { AuthRequest } from '../middleware/authMiddleware';
+import { generateImprovementReport } from '../modules/ai/aiService';
 
 // @desc    Get all results for the logged-in student
 // @route   GET /api/results/my-results
@@ -11,6 +13,25 @@ export const getMyResults = async (req: AuthRequest, res: Response) => {
             .populate('examId', 'title startTime duration')
             .sort({ submittedAt: -1 });
         res.json(results);
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get result for the logged-in student for a specific exam
+// @route   GET /api/results/exam/:examId/my-result
+// @access  Private (Student)
+export const getMyResultForExam = async (req: AuthRequest, res: Response) => {
+    try {
+        const result = await Result.findOne({ studentId: req.user._id, examId: req.params.examId })
+            .sort({ submittedAt: -1 })
+            .populate('examId', 'title description totalQuestions')
+            .populate('answers.questionId', 'text options correctAnswer type');
+
+        if (!result) {
+            return res.status(404).json({ message: 'Result not found for this exam' });
+        }
+        res.json(result);
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
@@ -87,54 +108,103 @@ export const getResultAnalysis = async (req: AuthRequest, res: Response) => {
             totalQuestions: stats.total
         }));
 
-        // 2. Peer Comparison & Rank
+        // 2. Peer Comparison & Rank (Optimized)
         const examObj = result.examId as any;
         const examId = examObj._id || examObj;
         const examStatus = examObj.status || 'published';
         const isClosed = examStatus === 'closed';
 
-        const allResultsForExam = await Result.find({ examId })
-            .populate('answers.questionId', 'text')
-            .sort({ score: -1, submittedAt: 1 })
-            .lean();
+        // Get basic stats for the exam
+        const examStatsArr = await Result.aggregate([
+            { $match: { examId: new mongoose.Types.ObjectId(examId) } },
+            {
+                $group: {
+                    _id: null,
+                    count: { $sum: 1 },
+                    avgScore: { $avg: "$score" }
+                }
+            }
+        ]);
 
-        const totalExams = allResultsForExam.length;
-        const totalScoreSum = allResultsForExam.reduce((sum, r) => sum + r.score, 0);
-        const examAverage = totalExams > 0 ? (totalScoreSum / totalExams) : 0;
+        const totalExams = examStatsArr.length > 0 ? examStatsArr[0].count : 0;
+        const examAverage = examStatsArr.length > 0 ? examStatsArr[0].avgScore : 0;
 
-        // Calculate Rank and Percentile
-        const rankIndex = allResultsForExam.findIndex(r => r._id.toString() === result._id.toString());
-        const classRank = rankIndex !== -1 ? rankIndex + 1 : null;
-        const studentsBeaten = allResultsForExam.filter(r => r.score < result.score).length;
-        const percentile = totalExams > 0 ? (studentsBeaten / totalExams) * 100 : 0;
+        // Calculate Rank (Competitive logic: count students who scored more, or same score with faster/earlier submission)
+        const higherScorersCount = await Result.countDocuments({
+            examId,
+            $or: [
+                { score: { $gt: result.score } },
+                { score: result.score, submittedAt: { $lt: result.submittedAt } }
+            ]
+        });
+        const classRank = higherScorersCount + 1;
+
+        // Calculate Percentile (Percentage of students with strictly lower scores)
+        const lowerScorersCount = await Result.countDocuments({
+            examId,
+            score: { $lt: result.score }
+        });
+        const percentile = totalExams > 0 ? (lowerScorersCount / totalExams) * 100 : 0;
 
         let peerGapQuestions: any[] = [];
-        if (isClosed) {
-            // 3. Questions missed by this student but correct for most others (>60%)
-            const questionPassRates: Record<string, { correct: number, total: number }> = {};
+        let adaptiveStats: any = null;
 
-            allResultsForExam.forEach(res => {
-                res.answers.forEach(ans => {
-                    if (!ans.questionId) return;
-                    const qId = (ans.questionId as any)._id ? (ans.questionId as any)._id.toString() : ans.questionId.toString();
-                    if (!questionPassRates[qId]) questionPassRates[qId] = { correct: 0, total: 0 };
-                    questionPassRates[qId].total++;
-                    if (ans.isCorrect) questionPassRates[qId].correct++;
-                });
-            });
-
+        if (examObj.isAdaptive) {
+            adaptiveStats = {
+                easy: { correct: 0, total: 0 },
+                medium: { correct: 0, total: 0 },
+                hard: { correct: 0, total: 0 }
+            };
             result.answers.forEach((ans: any) => {
-                if (!ans.isCorrect && ans.questionId) {
-                    const qId = (ans.questionId as any)._id ? (ans.questionId as any)._id.toString() : ans.questionId.toString();
-                    const stats = questionPassRates[qId];
-                    if (stats && (stats.correct / stats.total) > 0.6) {
-                        peerGapQuestions.push({
-                            text: (ans.questionId as any).text || 'Question',
-                            globalAccuracy: (stats.correct / stats.total) * 100
-                        });
+                if (!ans.questionId) return;
+                const q = ans.questionId as any;
+                if (q.difficulty) {
+                    const diff = q.difficulty as 'easy' | 'medium' | 'hard';
+                    if (adaptiveStats[diff]) {
+                        adaptiveStats[diff].total++;
+                        if (ans.isCorrect) adaptiveStats[diff].correct++;
                     }
                 }
             });
+        } else if (isClosed) {
+            // 3. Questions missed by this student but correct for most others (>60%)
+            // Optimized: Aggregate accuracy per question for ONLY the ones this student got wrong
+            const wrongQuestionIds = result.answers
+                .filter((ans: any) => !ans.isCorrect && ans.questionId)
+                .map((ans: any) => new mongoose.Types.ObjectId((ans.questionId as any)._id || ans.questionId));
+
+            if (wrongQuestionIds.length > 0) {
+                const globalQuestionAccuracyArr = await Result.aggregate([
+                    { $match: { examId: new mongoose.Types.ObjectId(examId) } },
+                    { $unwind: "$answers" },
+                    { $match: { "answers.questionId": { $in: wrongQuestionIds } } },
+                    {
+                        $group: {
+                            _id: "$answers.questionId",
+                            correctCount: { $sum: { $cond: ["$answers.isCorrect", 1, 0] } },
+                            totalCount: { $sum: 1 }
+                        }
+                    }
+                ]);
+
+                const accuracyMap = new Map();
+                globalQuestionAccuracyArr.forEach(item => {
+                    accuracyMap.set(item._id.toString(), item.correctCount / item.totalCount);
+                });
+
+                result.answers.forEach((ans: any) => {
+                    if (!ans.isCorrect && ans.questionId) {
+                        const qId = ((ans.questionId as any)._id || ans.questionId).toString();
+                        const accuracy = accuracyMap.get(qId);
+                        if (accuracy !== undefined && accuracy > 0.6) {
+                            peerGapQuestions.push({
+                                text: (ans.questionId as any).text || 'Question',
+                                globalAccuracy: accuracy * 100
+                            });
+                        }
+                    }
+                });
+            }
         }
 
         res.json({
@@ -148,9 +218,35 @@ export const getResultAnalysis = async (req: AuthRequest, res: Response) => {
             totalParticipants: totalExams,
             classRank,
             peerGapQuestions,
-            isInsightsAvailable: isClosed
+            isInsightsAvailable: isClosed,
+            isAdaptive: examObj.isAdaptive || false,
+            adaptiveStats
         });
     } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Generate a personal AI improvement report for the student
+// @route   GET /api/results/my-improvement
+// @access  Private (Student)
+export const getMyImprovementReport = async (req: AuthRequest, res: Response) => {
+    try {
+        const results = await Result.find({ studentId: req.user._id })
+            .populate('examId', 'title')
+            .populate('answers.questionId', 'text subject difficulty')
+            .sort({ submittedAt: -1 })
+            .limit(10);
+
+        if (results.length === 0) {
+            return res.status(404).json({ message: 'No results found to generate report' });
+        }
+
+        const report = await generateImprovementReport(req.user.name, results);
+        res.json({ report });
+
+    } catch (error: any) {
+        console.error('Improvement Report Error:', error);
         res.status(500).json({ message: error.message });
     }
 };

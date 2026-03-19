@@ -2,7 +2,7 @@ import Exam from '../models/Exam';
 import ExamSession from '../models/ExamSession';
 import Result from '../models/Result';
 import Question from '../models/Question';
-import { getIO } from '../socket';
+import { getIO } from '../modules/communication/socket';
 
 /**
  * Periodically checks for expired exams and finalizes them.
