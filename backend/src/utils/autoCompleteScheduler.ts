@@ -3,7 +3,7 @@ import ExamSession from '../models/ExamSession';
 import Result from '../models/Result';
 import User from '../models/User';
 import { getIO } from '../modules/communication/socket';
-import { evaluateDescriptiveAnswer, enqueueAITask } from './aiService';
+import { evaluateDescriptiveAnswer, enqueueAITask } from '../modules/ai/aiService';
 
 /**
  * Auto-Complete Scheduler (UNIFIED v3)
@@ -69,7 +69,7 @@ async function autoSubmitSession(session: any, populatedExam: any) {
                         referenceKey: question.referenceAnswer || '',
                         questionText: question.text,
                         maxPoints: question.points || 10
-                    }, 2).catch(e => console.error('[AutoComplete] Async grading enqueue failed:', e));
+                    }, 2).catch((e: Error) => console.error('[AutoComplete] Async grading enqueue failed:', e));
                 }
             } else {
                 isCorrect = question.correctAnswer === val;
@@ -127,7 +127,7 @@ async function autoSubmitSession(session: any, populatedExam: any) {
                     startTime: session.startTime
                 }, 1); // Lower priority for auto-complete tasks
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error('[AutoComplete] HEI enqueue failed:', e);
         }
 

@@ -1,9 +1,9 @@
-version: '3.8'
+# SOEMS Multi-Service Orchestration
 
 services:
   # Backend API Service
   soems-backend:
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: soems-backend
@@ -18,17 +18,19 @@ services:
       - NODE_ENV=${NODE_ENV:-production}
       - FRONTEND_URL=${FRONTEND_URL} # Should match the external domain/IP used to access port 443
       - AI_PROVIDER=${AI_PROVIDER:-ollama}
-      - OLLAMA_URL=http://ollama:11434
-      - AI_MODEL=${AI_MODEL:-llama3}
+      - OLLAMA_URL=${OLLAMA_URL:-http://host.docker.internal:11434}
+      - AI_MODEL=${AI_MODEL:-qwen2.5:7b}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./backend/uploads:/app/uploads
     depends_on:
       mongo:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/api/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:5001/api/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -48,7 +50,7 @@ services:
 
   # Frontend Web Service
   soems-frontend:
-    build: 
+    build:
       context: ./frontend
       args:
         - VITE_API_URL=/api
@@ -74,29 +76,6 @@ services:
     networks:
       - frontend-nw
 
-  # Local AI Service (Ollama)
-  ollama:
-    image: ollama/ollama:0.1.32
-    container_name: soems-ollama
-    restart: always
-    volumes:
-      - ollama-models:/root/.ollama
-    # GPU Support (Commented out by default)
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
-    deploy:
-      resources:
-        limits:
-          cpus: '2.0'
-          memory: 4G
-    networks:
-      - backend-nw
-
   # Local MongoDB Database
   mongo:
     image: mongo:6.0
@@ -110,7 +89,7 @@ services:
     volumes:
       - mongo-data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--username", "${MONGO_USER:-admin}", "--password", "${MONGO_PASS:-admin_pass}", "--eval", "db.adminCommand('ping')"]
+      test: [ "CMD", "mongosh", "--username", "${MONGO_USER:-admin}", "--password", "${MONGO_PASS:-admin_pass}", "--eval", "db.adminCommand('ping')" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -122,16 +101,6 @@ services:
     networks:
       - backend-nw
 
-  # Automate model pulling (Turn-key AI support)
-  ollama-pull-model:
-    image: curlimages/curl:latest
-    container_name: soems-ollama-pull
-    networks:
-      - backend-nw
-    depends_on:
-      - ollama
-    entrypoint: [ "sh", "-c", "echo 'Waiting for Ollama to start...' && sleep 10 && curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"llama3\"}'" ]
-
 networks:
   frontend-nw:
     driver: bridge
@@ -140,4 +109,3 @@ networks:
 
 volumes:
   mongo-data:
-  ollama-models:
