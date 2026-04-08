@@ -30,14 +30,40 @@ export const getUsers = async (req: Request, res: Response) => {
 export const createUser = async (req: Request, res: Response) => {
     try {
         const schema = z.object({
-            name: z.string().min(2),
-            email: z.string().email(),
-            password: z.string().min(6),
+            name: z.string().min(2, "Name must be at least 2 characters"),
+            email: z.string().email("Invalid email address"),
+            password: z.string().min(6, "Password must be at least 6 characters"),
             role: z.enum(['student', 'teacher', 'admin', 'proctor']).default('student'),
-            rollNo: z.string().regex(/^\d{13}$/, "Roll No must be exactly 13 digits").optional(),
-            phoneNumber: z.string().regex(/^\d{10}$/, "Phone number must be exactly 10 digits").optional(),
+            rollNo: z.string().optional(),
+            phoneNumber: z.string().optional(),
             groupId: z.string().optional(),
             subgroupId: z.string().optional()
+        }).superRefine((data, ctx) => {
+            // Validation for Student
+            if (data.role === 'student') {
+                if (!data.rollNo) {
+                    ctx.addIssue({
+                        code: z.ZodIssueCode.custom,
+                        message: "Roll No is required for students",
+                        path: ["rollNo"]
+                    });
+                } else if (!/^\d{13}$/.test(data.rollNo)) {
+                    ctx.addIssue({
+                        code: z.ZodIssueCode.custom,
+                        message: "Roll No must be exactly 13 digits",
+                        path: ["rollNo"]
+                    });
+                }
+            }
+
+            // Common Validation: Phone Number (If provided)
+            if (data.phoneNumber && data.phoneNumber !== "" && !/^\d{10}$/.test(data.phoneNumber)) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "Phone number must be exactly 10 digits",
+                    path: ["phoneNumber"]
+                });
+            }
         });
 
         const validation = schema.safeParse(req.body);

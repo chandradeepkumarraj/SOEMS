@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { ArrowLeft, ArrowRight, Plus, Trash2, Save, CheckCircle2, FileText, ShieldAlert, ShieldCheck, Copy, Cpu, Zap, Timer, Image, X, Users, UserCheck, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, Trash2, Save, CheckCircle2, FileText, ShieldAlert, Cpu, Zap, Timer, Image, X, Users, UserCheck, Loader2 } from 'lucide-react';
 import { getApiUrl } from '../config/apiConfig';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,10 +10,11 @@ import { createQuestion, updateQuestion } from '../services/questionService';
 import { createExam, getExamById, updateExam } from '../services/examService';
 import { getGroups, getSubgroups, getSystemDefaults } from '../services/adminService';
 import { getProctors, getUserProfile } from '../services/userService';
-import { useEffect } from 'react';
 import AIGeneratorModal from '../components/exam/AIGeneratorModal';
 import { useAIStatus } from '../hooks/useAIStatus';
 import { PerformanceSlider } from '../components/proctoring/ProctoringControls';
+import { ProctoringConfig } from '../components/exam/ProctoringConfig';
+import apiClient from '../services/apiClient';
 
 interface Question {
     _id?: string;
@@ -30,6 +31,7 @@ interface Question {
 }
 
 export default function CreateExam() {
+    const API_BASE = getApiUrl();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const editId = searchParams.get('edit');
@@ -241,20 +243,12 @@ export default function CreateExam() {
         }));
     };
 
-    const API_BASE = (import.meta as any).env?.VITE_API_URL ?? getApiUrl();
-
     const handleQuestionImageUpload = async (qId: number, file: File) => {
         const formData = new FormData();
         formData.append('questionImage', file);
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${API_BASE}/api/upload/question-image`, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${token}` },
-                body: formData
-            });
-            const data = await res.json();
-            if (data.url) handleQuestionChange(qId, 'imageUrl', data.url);
+            const res = await apiClient.post('/api/upload/question-image', formData);
+            if (res.data?.url) handleQuestionChange(qId, 'imageUrl', res.data.url);
         } catch (e) { alert('Image upload failed.'); }
     };
 
@@ -262,18 +256,12 @@ export default function CreateExam() {
         const formData = new FormData();
         formData.append('optionImage', file);
         try {
-            const token = localStorage.getItem('token');
-            const res = await fetch(`${API_BASE}/api/upload/option-image`, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${token}` },
-                body: formData
-            });
-            const data = await res.json();
-            if (data.url) {
+            const res = await apiClient.post('/api/upload/option-image', formData);
+            if (res.data?.url) {
                 setQuestions(questions.map(q => {
                     if (q.id === qId) {
                         const imgs = [...(q.optionImages || ['', '', '', ''])];
-                        imgs[optIndex] = data.url;
+                        imgs[optIndex] = res.data.url;
                         return { ...q, optionImages: imgs };
                     }
                     return q;
@@ -624,192 +612,25 @@ export default function CreateExam() {
                                         </label>
                                         <p className="text-xs text-slate-900 dark:text-slate-400 font-bold italic ml-6">Biometric results and analytics will be automatically exposed to candidates upon session closure.</p>
                                     </div>
-                                    <div className="md:col-span-2 border-t-2 border-slate-200 dark:border-slate-800 pt-8 mt-4">
-                                        <div className="flex items-center justify-between mb-6">
-                                            <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-3 uppercase tracking-[0.2em]">
-                                                <ShieldAlert className="h-5 w-5 text-primary" /> Sentinel Protocols
-                                            </h3>
-                                            <div className="flex items-center gap-2">
-                                                {userProfile?.proctoringPresets && (
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => {
-                                                            setExamData({
-                                                                ...examData,
-                                                                proctoringConfig: {
-                                                                    ...examData.proctoringConfig,
-                                                                    ...userProfile.proctoringPresets
-                                                                }
-                                                            });
-                                                        }}
-                                                        className="text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/5 flex items-center gap-2"
-                                                    >
-                                                        <Zap className="h-3 w-3" /> Load My Preset
-                                                    </Button>
-                                                )}
-                                                {systemDefaults?.proctoringDefaults && (
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => {
-                                                            setExamData({
-                                                                ...examData,
-                                                                proctoringConfig: {
-                                                                    ...examData.proctoringConfig,
-                                                                    ...systemDefaults.proctoringDefaults
-                                                                }
-                                                            });
-                                                        }}
-                                                        className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 flex items-center gap-2"
-                                                    >
-                                                        <ShieldCheck className="h-3 w-3" /> System Defaults
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            <div className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-                                                <input
-                                                    type="checkbox"
-                                                    id="tabLock"
-                                                    checked={examData.proctoringConfig.enableTabLock}
-                                                    onChange={(e) => setExamData({
-                                                        ...examData,
-                                                        proctoringConfig: { ...examData.proctoringConfig, enableTabLock: e.target.checked }
-                                                    })}
-                                                    className="mt-1 h-4 w-4 text-primary rounded border-gray-300 dark:border-slate-800 focus:ring-primary bg-white dark:bg-slate-950"
-                                                />
-                                                <label htmlFor="tabLock" className="cursor-pointer">
-                                                    <span className="text-sm font-medium text-gray-700 dark:text-slate-300 block">Tab Lock</span>
-                                                    <span className="text-[10px] text-gray-500 dark:text-slate-500">Detect tab/window switching</span>
-                                                </label>
-                                            </div>
-                                            <div className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-                                                <input
-                                                    type="checkbox"
-                                                    id="fullscreen"
-                                                    checked={examData.proctoringConfig.enableFullscreen}
-                                                    onChange={(e) => setExamData({
-                                                        ...examData,
-                                                        proctoringConfig: { ...examData.proctoringConfig, enableFullscreen: e.target.checked }
-                                                    })}
-                                                    className="mt-1 h-4 w-4 text-primary rounded border-gray-300 dark:border-slate-800 focus:ring-primary bg-white dark:bg-slate-950"
-                                                />
-                                                <label htmlFor="fullscreen" className="cursor-pointer">
-                                                    <span className="text-sm font-medium text-gray-700 dark:text-slate-300 block">Force Fullscreen</span>
-                                                    <span className="text-[10px] text-gray-500 dark:text-slate-500">Exam must be in fullscreen</span>
-                                                </label>
-                                            </div>
-                                            <div className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-                                                <input
-                                                    type="checkbox"
-                                                    id="inputLock"
-                                                    checked={examData.proctoringConfig.enableInputLock}
-                                                    onChange={(e) => setExamData({
-                                                        ...examData,
-                                                        proctoringConfig: { ...examData.proctoringConfig, enableInputLock: e.target.checked }
-                                                    })}
-                                                    className="mt-1 h-4 w-4 text-primary rounded border-gray-300 dark:border-slate-800 focus:ring-primary bg-white dark:bg-slate-950"
-                                                />
-                                                <label htmlFor="inputLock" className="cursor-pointer">
-                                                    <span className="text-sm font-medium text-gray-700 dark:text-slate-300 block">Input Lockdown</span>
-                                                    <span className="text-[10px] text-gray-500 dark:text-slate-500">Block Ctrl+C, Ctrl+V, etc.</span>
-                                                </label>
-                                            </div>
 
-                                            {/* AI Monitoring Modules */}
-                                            <div className="md:col-span-3 mt-2">
-                                                <h4 className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                                                    <div className="h-1 w-1 rounded-full bg-indigo-500" />
-                                                    AI Monitoring Modules
-                                                </h4>
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                    <div className="flex items-start gap-3 p-3 rounded-lg border border-blue-100 dark:border-blue-900/30 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 transition-colors">
-                                                        <input
-                                                            type="checkbox"
-                                                            id="faceDetection"
-                                                            checked={examData.proctoringConfig.enableFaceDetection}
-                                                            onChange={(e) => {
-                                                                const enabled = e.target.checked;
-                                                                setExamData({
-                                                                    ...examData,
-                                                                    proctoringConfig: {
-                                                                        ...examData.proctoringConfig,
-                                                                        enableFaceDetection: enabled,
-                                                                        ...(enabled ? {} : { enableGazeTracking: false })
-                                                                    }
-                                                                });
-                                                            }}
-                                                            className="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300 dark:border-slate-800 focus:ring-blue-500 bg-white dark:bg-slate-950"
-                                                        />
-                                                        <label htmlFor="faceDetection" className="cursor-pointer">
-                                                            <span className="text-sm font-medium text-gray-700 dark:text-slate-300 block">Face Detection (AI)</span>
-                                                            <span className="text-[10px] text-gray-500 dark:text-slate-500">Multiple faces & face absence monitoring</span>
-                                                        </label>
-                                                    </div>
-                                                    <div className="flex items-start gap-3 p-3 rounded-lg border border-amber-100 dark:border-amber-900/30 hover:bg-amber-50/50 dark:hover:bg-amber-950/20 transition-colors">
-                                                        <input
-                                                            type="checkbox"
-                                                            id="voiceDetection"
-                                                            checked={examData.proctoringConfig.enableVoiceDetection}
-                                                            onChange={(e) => setExamData({
-                                                                ...examData,
-                                                                proctoringConfig: { ...examData.proctoringConfig, enableVoiceDetection: e.target.checked }
-                                                            })}
-                                                            className="mt-1 h-4 w-4 text-amber-600 rounded border-gray-300 dark:border-slate-800 focus:ring-amber-500 bg-white dark:bg-slate-950"
-                                                        />
-                                                        <label htmlFor="voiceDetection" className="cursor-pointer">
-                                                            <span className="text-sm font-medium text-gray-700 dark:text-slate-300 block">Smart Listening</span>
-                                                            <span className="text-[10px] text-gray-500 dark:text-slate-500">Detects talking or background voices</span>
-                                                        </label>
-                                                    </div>
-                                                    <div className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${examData.proctoringConfig.enableFaceDetection ? 'border-indigo-100 dark:border-indigo-900/30 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20' : 'border-gray-100 dark:border-slate-800 opacity-50 cursor-not-allowed'}`}>
-                                                        <input
-                                                            type="checkbox"
-                                                            id="gazeTracking"
-                                                            checked={examData.proctoringConfig.enableGazeTracking}
-                                                            disabled={!examData.proctoringConfig.enableFaceDetection}
-                                                            onChange={(e) => setExamData({
-                                                                ...examData,
-                                                                proctoringConfig: { ...examData.proctoringConfig, enableGazeTracking: e.target.checked }
-                                                            })}
-                                                            className="mt-1 h-4 w-4 text-indigo-600 rounded border-gray-300 dark:border-slate-800 focus:ring-indigo-500 bg-white dark:bg-slate-950 disabled:opacity-50"
-                                                        />
-                                                        <label htmlFor="gazeTracking" className={`cursor-pointer ${!examData.proctoringConfig.enableFaceDetection ? 'cursor-not-allowed' : ''}`}>
-                                                            <span className="text-sm font-medium text-gray-700 dark:text-slate-300 block">Look-Away Detection</span>
-                                                            <span className="text-[10px] text-gray-500 dark:text-slate-500">{examData.proctoringConfig.enableFaceDetection ? 'Alert when student stops looking at the screen' : 'Requires Presence Check to be enabled'}</span>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="md:col-span-3 flex items-center justify-between p-4 bg-red-50/50 dark:bg-red-900/10 rounded-xl border border-red-100/50 dark:border-red-900/20">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="p-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg">
-                                                        <ShieldAlert className="h-5 w-5" />
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-sm font-bold text-gray-900 dark:text-slate-100 block">Allowed Cheating Attempts</span>
-                                                        <span className="text-xs text-gray-500 dark:text-slate-400">Student gets this many warnings before being automatically submitted.</span>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-3 bg-white dark:bg-slate-950 p-1 rounded-lg border border-red-200 dark:border-red-900/50 shadow-sm">
-                                                    <input
-                                                        type="number"
-                                                        min="1"
-                                                        max="50"
-                                                        value={examData.proctoringConfig.violationThreshold}
-                                                        onChange={(e) => setExamData({
-                                                            ...examData,
-                                                            proctoringConfig: { ...examData.proctoringConfig, violationThreshold: parseInt(e.target.value) || 1 }
-                                                        })}
-                                                        className="w-16 text-center font-black text-red-600 dark:text-red-400 bg-transparent focus:outline-none text-lg"
-                                                    />
-                                                    <span className="text-[10px] font-black text-red-400 dark:text-red-500 uppercase tracking-widest pr-2">Chances</span>
-                                                </div>
-                                            </div>
+                                    <ProctoringConfig
+                                        config={examData.proctoringConfig}
+                                        userProfile={userProfile}
+                                        systemDefaults={systemDefaults}
+                                        onChange={(field: string, value: any) => {
+                                            if (field === 'all') {
+                                                setExamData({
+                                                    ...examData,
+                                                    proctoringConfig: { ...examData.proctoringConfig, ...value }
+                                                });
+                                            } else {
+                                                setExamData({
+                                                    ...examData,
+                                                    proctoringConfig: { ...examData.proctoringConfig, [field]: value }
+                                                });
+                                            }
+                                        }}
+                                    />
 
                                             {/* Nested Performance Sliders for Exam Overrides */}
                                             <div className="md:col-span-3 bg-slate-50 dark:bg-slate-800/20 p-6 rounded-2xl border border-slate-100 dark:border-slate-800">
@@ -958,8 +779,6 @@ export default function CreateExam() {
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </div>
                                 </div>
 
                                 {/* Adaptive Mode Toggle */}
@@ -1315,33 +1134,40 @@ export default function CreateExam() {
                                             className="gap-2 px-10 py-4 text-sm font-black hover:scale-105 transition-all shadow-2xl shadow-emerald-500/40"
                                             disabled={loading}
                                         >
-                                            {loading ? (
+                                            {loading && !saveAsNew ? (
                                                 <>
                                                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                                                    {editId && !cloneId ? 'Saving Changes...' : 'Publishing...'}
+                                                    'Saving Changes...'
                                                 </>
                                             ) : (
                                                 <>
                                                     <CheckCircle2 className="h-5 w-5" />
-                                                    {editId && !cloneId ? 'Save & Update Existing' : 'Publish as New Exam'}
+                                                    {editId && !cloneId ? 'Save & Update Existing' : 'Publish Exam Now'}
                                                 </>
                                             )}
                                         </Button>
 
                                         {editId && !cloneId && (
                                             <Button
-                                                variant="success"
+                                                variant="outline"
                                                 onClick={() => {
-                                                    if (window.confirm("This will create a NEW copy of the exam. Use this if you want students who already finished to take the exam again. Continue?")) {
-                                                        setSaveAsNew(true);
-                                                        setExamData(prev => ({ ...prev, title: `${prev.title} (New Version)` }));
-                                                        setTimeout(() => handlePublish(), 0);
-                                                    }
+                                                    setSaveAsNew(true);
+                                                    setTimeout(handlePublish, 100);
                                                 }}
-                                                className="gap-2 px-10 py-3 text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-emerald-500/20 opacity-80 hover:opacity-100"
+                                                className="gap-2 px-10 py-4 text-sm font-black border-2 border-amber-500 text-amber-600 hover:bg-amber-50 transition-all uppercase tracking-widest shadow-xl shadow-amber-500/10"
+                                                disabled={loading}
                                             >
-                                                <Copy className="h-4 w-4" />
-                                                Publish as New Version instead?
+                                                {loading && saveAsNew ? (
+                                                    <>
+                                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-amber-500"></div>
+                                                        Cloning...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Zap className="h-5 w-5" />
+                                                        Clone & Publish as New
+                                                    </>
+                                                )}
                                             </Button>
                                         )}
                                     </div>

@@ -71,7 +71,28 @@ export default function UserList({ refreshTrigger }: UserListProps) {
     const handleCreateUser = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const created = await createUser(newUser);
+            // Prepare cleaned payload
+            const payload: any = {
+                name: newUser.name,
+                email: newUser.email,
+                password: newUser.password,
+                role: newUser.role,
+            };
+
+            // Add fields only if they have values
+            if (newUser.phoneNumber && newUser.phoneNumber.trim() !== '') {
+                payload.phoneNumber = newUser.phoneNumber.trim();
+            }
+
+            if (newUser.role === 'student') {
+                if (newUser.rollNo && newUser.rollNo.trim() !== '') {
+                    payload.rollNo = newUser.rollNo.trim();
+                }
+                if (newUser.groupId) payload.groupId = newUser.groupId;
+                if (newUser.subgroupId) payload.subgroupId = newUser.subgroupId;
+            }
+
+            const created = await createUser(payload);
             setUsers([created, ...users]);
             setShowAddModal(false);
             setNewUser({
@@ -79,7 +100,14 @@ export default function UserList({ refreshTrigger }: UserListProps) {
             });
             setMsg({ type: 'success', text: `User ${created.name} created!` });
         } catch (error: any) {
-            setMsg({ type: 'error', text: error.response?.data?.message || 'Failed to create user' });
+            const errorData = error.response?.data;
+            let errorMessage = errorData?.message || 'Failed to create user';
+            
+            if (errorData?.details && Array.isArray(errorData.details)) {
+                errorMessage = `${errorMessage}: ${errorData.details.map((d: any) => d.message).join(', ')}`;
+            }
+            
+            setMsg({ type: 'error', text: errorMessage });
         }
     };
 

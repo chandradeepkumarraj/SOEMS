@@ -550,8 +550,8 @@ export const getExams = async (req: AuthRequest, res: Response) => {
             };
 
             query.$and = [groupFilter, subgroupFilter];
-        } else if (req.user && (req.user.role === 'proctor' || req.user.role === 'teacher')) {
-            // Enhanced Visibility: Teachers/Proctors see:
+        } else if (req.user && req.user.role === 'teacher') {
+            // Teachers see:
             // 1. Exams they created
             // 2. Exams where they are manually assigned as proctors
             // 3. Exams belonging to their managed departments (Groups)
@@ -561,9 +561,15 @@ export const getExams = async (req: AuthRequest, res: Response) => {
                 { proctors: req.user._id },
                 { allowedGroups: { $in: managedGroups } }
             ];
+        } else if (req.user && req.user.role === 'proctor') {
+            // Proctors see ALL published/closed/archived exams for monitoring
+            query.status = { $ne: 'draft' };
         }
 
-        const exams = await Exam.find(query).populate('creatorId', 'name email').lean();
+        const exams = await Exam.find(query)
+            .populate('creatorId', 'name email')
+            .sort({ createdAt: -1 })
+            .lean();
 
         // Efficiently fetch counts and statuses (Optimized to reduce N+1 queries)
         const examIds = exams.map(e => e._id);
@@ -1334,12 +1340,18 @@ export const resumeStudentSession = async (req: AuthRequest, res: Response) => {
 
         await session.save();
 
-        // 3. Notify student via Socket
+        // 3. Notify student and proctors via Socket
         const io = getIO();
         io.to(examId).emit('student-unsuspended', {
             studentId,
             examId,
             message: 'Your exam session has been resumed by a proctor.'
+        });
+
+        io.to('global-proctor-room').emit('student-unsuspended', {
+            studentId,
+            examId,
+            message: 'A student session was resumed.'
         });
 
         res.json({ message: 'Session resumed successfully.', session });

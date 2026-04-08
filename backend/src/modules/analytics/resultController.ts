@@ -234,15 +234,31 @@ export const getMyImprovementReport = async (req: AuthRequest, res: Response) =>
     try {
         const results = await Result.find({ studentId: req.user._id })
             .populate('examId', 'title')
-            .populate('answers.questionId', 'text subject difficulty')
+            .populate('answers.questionId', 'subject')
             .sort({ submittedAt: -1 })
-            .limit(10);
+            .limit(5); // Reduced limit for faster processing
 
         if (results.length === 0) {
             return res.status(404).json({ message: 'No results found to generate report' });
         }
 
-        const report = await generateImprovementReport(req.user.name, results);
+        // 1. Fetch User Name if missing (from populate or direct hit)
+        let studentName = req.user.name || 'Student';
+        if (!req.user.name) {
+            const User = mongoose.model('User');
+            const userDoc = await User.findById(req.user._id).select('name');
+            if (userDoc) studentName = userDoc.name;
+        }
+
+        // 2. Prune results for the AI context (Efficiency: reduce payload by 90%)
+        const performanceSummary = results.map(r => ({
+            exam: (r.examId as any)?.title || 'Exam',
+            score: r.score,
+            totalPoints: r.totalPoints,
+            topics: Array.from(new Set(r.answers.map(a => (a.questionId as any)?.subject).filter(Boolean)))
+        }));
+
+        const report = await generateImprovementReport(studentName, performanceSummary);
         res.json({ report });
 
     } catch (error: any) {

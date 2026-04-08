@@ -24,6 +24,12 @@ apiClient.interceptors.request.use(
                 }
             }
         }
+
+        // Fix for File Uploads: Let browser automatically set boundary for multipart forms
+        if (config.data instanceof FormData) {
+            delete config.headers['Content-Type'];
+        }
+
         return config;
     },
     (error) => Promise.reject(error)

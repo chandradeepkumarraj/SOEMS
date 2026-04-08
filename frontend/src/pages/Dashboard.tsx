@@ -258,8 +258,8 @@ export default function Dashboard() {
                             <Trophy className="h-5 w-5 text-yellow-500" /> {t('dashboard.score_journey')}
                         </h2>
                         {results.length > 0 ? (
-                            <div className="h-[300px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
+                            <div className="h-[300px] w-full min-h-[300px] min-w-0">
+                                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                                     <LineChart data={results.map((r, i) => ({
                                         name: t('dashboard.exam_n', { n: i + 1 }),
                                         score: Math.round((r.score / r.totalPoints) * 100)

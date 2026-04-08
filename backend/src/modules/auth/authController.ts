@@ -7,8 +7,8 @@ import bcrypt from 'bcryptjs';
 import { SERVER_CONFIG } from '../../config/serverConfig';
 
 // Generate JWT Token
-const generateToken = (id: string) => {
-    return jwt.sign({ id }, SERVER_CONFIG.JWT_SECRET || 'secret', {
+const generateToken = (id: string, role: string) => {
+    return jwt.sign({ id, role }, SERVER_CONFIG.JWT_SECRET as string, {
         expiresIn: '30d',
     });
 };
@@ -47,7 +47,7 @@ export const loginUser = async (req: Request, res: Response) => {
                 name: user.name,
                 email: user.email,
                 role: user.role,
-                token: generateToken(user._id.toString()),
+                token: generateToken(user._id.toString(), user.role),
             });
         } else {
             res.status(401).json({ message: 'Invalid email or password' });

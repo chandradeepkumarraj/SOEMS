@@ -13,6 +13,10 @@ import { StatCard } from '../components/proctor/StatCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { CandidateCard } from '../components/proctor/CandidateCard';
 
+// Audio alert for new violations
+const ALERT_SOUND = new Audio('/assets/sounds/notify_sound.mp3');
+ALERT_SOUND.volume = 0.6;
+
 export default function ProctorDashboard() {
     const { t } = useTranslation();
     const [exams, setExams] = useState<any[]>([]);
@@ -64,12 +68,6 @@ export default function ProctorDashboard() {
         fetchInitialData();
     }, [selectedExamId]);
 
-    const activeExamIds = useMemo(() => {
-        const now = new Date();
-        return exams
-            .filter(e => e.status === 'published' && new Date(e.endTime) > now)
-            .map(e => e._id);
-    }, [exams]);
 
     const ongoingExams = useMemo(() => {
         const now = new Date();
@@ -85,13 +83,62 @@ export default function ProctorDashboard() {
         const socket = getSocket();
         socket.emit('join-room', 'global-proctor-room');
 
-        const handleProctorAlert = (data: any) => {
-            // Requirement: If Global view is selected, ONLY show violations of current ongoing exams
-            const isOngoing = activeExamIds.includes(data.examId);
-            if (selectedExamId === 'all' && !isOngoing) return;
+        const updateSession = (data: any, status: 'active' | 'submitted' | 'alert', isSuspended?: boolean) => {
+            if (status === 'alert' && !isSuspended) {
+                ALERT_SOUND.play().catch(() => { });
+            }
 
+            // Sync with stats
+            if (status === 'alert') setStats(prev => ({ ...prev, totalViolations: prev.totalViolations + 1 }));
+            if (isSuspended === true) setStats(prev => ({ ...prev, totalSuspensions: prev.totalSuspensions + 1 }));
+
+            setActiveSessions(prev => {
+                const sId = data.studentId;
+                const existing = prev.find(s => (s.studentId?._id || s.studentId) === sId);
+
+                if (existing) {
+                    return prev.map(s => (s.studentId?._id || s.studentId) === sId ? {
+                        ...s,
+                        status,
+                        isSuspended: isSuspended !== undefined ? isSuspended : s.isSuspended,
+                        violationCount: status === 'alert' ? (s.violationCount || 0) + 1 : s.violationCount
+                    } : s);
+                }
+
+                // If new student started, add them to the monitor
+                if (status === 'active') {
+                    return [{
+                        studentId: data.studentId,
+                        studentName: data.studentName,
+                        studentRollNo: data.studentRollNo,
+                        examId: data.examId,
+                        status: 'active',
+                        violationCount: 0,
+                        isSuspended: false
+                    }, ...prev];
+                }
+                return prev;
+            });
+        };
+
+        const handleExamStart = (data: any) => {
+            updateSession(data, 'active');
+            // If the exam is not in our list yet, we might need to refresh exams or just trust the start event
+            if (!exams.find(e => e._id === data.examId)) {
+                setExams(prev => [...prev, { _id: data.examId, title: data.examTitle || 'New Exam', status: 'published' }]);
+            }
+        };
+
+        const handleExamSubmit = (data: any) => {
+            updateSession(data, 'submitted');
+            // Maybe remove from active after some time or just keep as 'submitted'
+        };
+
+        const handleProctorAlert = (data: any) => {
             if (selectedExamId === 'all' || data.examId === selectedExamId) {
-                // Group violations by student in the feed
+                updateSession(data, 'alert');
+
+                // Update Feed
                 setLiveFeed(prev => {
                     const existingIdx = prev.findIndex(item => item.studentId === data.studentId && item.type === data.alertType);
                     if (existingIdx > -1) {
@@ -100,7 +147,7 @@ export default function ProctorDashboard() {
                             ...updated[existingIdx],
                             timestamp: new Date(),
                             count: (updated[existingIdx].count || 1) + 1,
-                            message: data.message, // Keep latest message
+                            message: data.message,
                             studentRollNo: data.studentRollNo || updated[existingIdx].studentRollNo
                         };
                         return updated;
@@ -108,43 +155,63 @@ export default function ProctorDashboard() {
                     return [{ ...data, count: 1, timestamp: new Date() }, ...prev].slice(0, 50);
                 });
 
-                setStats(prev => ({ ...prev, totalViolations: prev.totalViolations + 1 }));
-
-                // Update specific session violation count
-                setActiveSessions(prev => prev.map(s => {
-                    const sId = s.studentId?._id || s.studentId;
-                    return sId === data.studentId
-                        ? { ...s, violationCount: (s.violationCount || 0) + 1 }
-                        : s;
-                }));
+                // Update Violations State (for Intelligence Hub / Reports)
+                setViolations(prev => {
+                    const newViolation = {
+                        ...data,
+                        studentId: { _id: data.studentId, name: data.studentName, rollNo: data.studentRollNo },
+                        examId: { _id: data.examId, title: data.examTitle || 'Live Exam' },
+                        timestamp: new Date().toISOString(),
+                        type: data.alertType
+                    };
+                    return [newViolation, ...prev];
+                });
             }
         };
 
         const handleSuspension = (data: any) => {
-            const isOngoing = activeExamIds.includes(data.examId);
-            if (selectedExamId === 'all' && !isOngoing) return;
-
             if (selectedExamId === 'all' || data.examId === selectedExamId) {
-                setLiveFeed(prev => [{ ...data, type: 'SUSPENSION', count: 1, message: data.reason, timestamp: new Date() }, ...prev].slice(0, 50));
-                setStats(prev => ({ ...prev, totalSuspensions: prev.totalSuspensions + 1 }));
-
-                setActiveSessions(prev => prev.map(s => {
-                    const sId = s.studentId?._id || s.studentId;
-                    return sId === data.studentId
-                        ? { ...s, isSuspended: true }
-                        : s;
-                }));
+                updateSession(data, 'alert', true);
+                const suspensionAlert = { ...data, type: 'SUSPENSION', count: 1, message: data.reason, timestamp: new Date() };
+                setLiveFeed(prev => [suspensionAlert, ...prev].slice(0, 50));
+                
+                // Add to violations table too
+                setViolations(prev => [{
+                    ...suspensionAlert,
+                    studentId: { _id: data.studentId, name: data.studentName, rollNo: data.studentRollNo },
+                    examId: { _id: data.examId, title: data.examTitle || 'Live Exam' },
+                    timestamp: new Date().toISOString()
+                }, ...prev]);
             }
         };
 
+        const handleUnsuspension = (data: any) => {
+            if (selectedExamId === 'all' || data.examId === selectedExamId) {
+                updateSession(data, 'active', false);
+                setLiveFeed(prev => [{
+                    type: 'RESUMPTION',
+                    studentName: data.studentName || 'System',
+                    message: `Session resumed by proctor.`,
+                    timestamp: new Date(),
+                    studentId: data.studentId
+                }, ...prev].slice(0, 50));
+            }
+        };
+
+        socket.on('monitor-exam-start', handleExamStart);
+        socket.on('monitor-exam-submit', handleExamSubmit);
         socket.on('monitor-proctor-alert', handleProctorAlert);
         socket.on('student-suspended', handleSuspension);
+        socket.on('student-unsuspended', handleUnsuspension);
 
         return () => {
+            socket.off('monitor-exam-start', handleExamStart);
+            socket.off('monitor-exam-submit', handleExamSubmit);
             socket.off('monitor-proctor-alert', handleProctorAlert);
             socket.off('student-suspended', handleSuspension);
+            socket.off('student-unsuspended', handleUnsuspension);
         };
-    }, [selectedExamId]);
+    }, [selectedExamId, exams]);
 
     const consolidatedViolations = useMemo(() => {
         const grouped: Record<string, any> = {};
@@ -172,21 +239,17 @@ export default function ProctorDashboard() {
         });
 
         return Object.values(grouped).filter((v: any) => {
-            // Requirement: If 'Global' is selected then only show violations of current ongoing exams
-            const examId = v.examId?._id || v.examId;
-            const isOngoing = activeExamIds.includes(examId);
-            if (selectedExamId === 'all' && !isOngoing) return false;
-
-            const studentName = v.studentId?.name || '';
-            const studentRoll = v.studentId?.rollNo || '';
-            const examTitle = v.examId?.title || '';
+            // Keep it broad so proctors can see all active/recent violations
+            const studentName = (v.studentId?.name || '').toLowerCase();
+            const studentRoll = (v.studentId?.rollNo || '').toLowerCase();
+            const examTitle = (v.examId?.title || '').toLowerCase();
             const search = searchTerm.toLowerCase();
 
-            return studentName.toLowerCase().includes(search) ||
-                studentRoll.toLowerCase().includes(search) ||
-                examTitle.toLowerCase().includes(search);
+            return studentName.includes(search) ||
+                studentRoll.includes(search) ||
+                examTitle.includes(search);
         }).sort((a: any, b: any) => new Date(b.lastDetected).getTime() - new Date(a.lastDetected).getTime());
-    }, [violations, searchTerm, activeExamIds, selectedExamId]);
+    }, [violations, searchTerm]);
 
     const handleResume = async (examId: string, studentId: string) => {
         try {

@@ -19,7 +19,14 @@ export default function PerformanceMentor() {
             const data = await getMyImprovementReport();
             setReport(data.report);
         } catch (err: any) {
-            setError(err.response?.data?.message || 'Failed to generate mentor report');
+            const status = err.response?.status;
+            if (status === 500) {
+                setError('The AI Mentor is taking a short break (high demand). Please try again in 30 seconds.');
+            } else if (status === 404) {
+                setError('Not enough exam data yet. Complete a few more exams for a personalized roadmap!');
+            } else {
+                setError(err.response?.data?.message || 'AI engine is currently offline. Check your connection.');
+            }
         } finally {
             setLoading(false);
         }

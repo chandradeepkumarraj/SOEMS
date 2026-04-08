@@ -1598,64 +1598,69 @@ export const getCheatingAnalysis = async (req: AuthRequest, res: Response) => {
                     from: 'examsessions',
                     localField: '_id',
                     foreignField: 'examId',
-                    as: 'sessions'
+                    as: 'activeSessions'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'results',
+                    localField: '_id',
+                    foreignField: 'examId',
+                    as: 'finalResults'
                 }
             },
             {
                 $addFields: {
-                    totalCandidates: { $size: '$sessions' },
-                    suspensions: {
-                        $size: {
-                            $filter: {
-                                input: '$sessions',
-                                as: 's',
-                                cond: { $eq: ['$$s.isSuspended', true] }
-                            }
-                        }
-                    },
-                    ongoing: {
-                        $size: {
-                            $filter: {
-                                input: '$sessions',
-                                as: 's',
-                                cond: { $eq: ['$$s.status', 'in-progress'] }
-                            }
-                        }
-                    },
-                    completed: {
-                        $size: {
-                            $filter: {
-                                input: '$sessions',
-                                as: 's',
-                                cond: { $eq: ['$$s.status', 'completed'] }
-                            }
-                        }
-                    },
-                    totalViolations: { $sum: '$sessions.violationCount' }
+                    sessionVol: { $sum: '$activeSessions.violationCount' },
+                    sessionSusp: { $size: { $filter: { input: '$activeSessions', as: 's', cond: { $eq: ['$$s.isSuspended', true] } } } },
+                    resultSusp: { $size: { $filter: { input: '$finalResults', as: 'r', cond: { $eq: ['$$r.isSuspended', true] } } } },
+                    totalParticipants: { $add: [{ $size: '$activeSessions' }, { $size: '$finalResults' }] }
                 }
             },
             {
                 $project: {
-                    title: 1,
-                    status: 1,
-                    totalCandidates: 1,
-                    suspensions: 1,
-                    ongoing: 1,
-                    completed: 1,
-                    totalViolations: 1,
-                    cheatingRiskScore: {
-                        $cond: [
-                            { $gt: ['$totalCandidates', 0] },
-                            { $divide: ['$totalViolations', '$totalCandidates'] },
-                            0
-                        ]
-                    }
+                    examId: '$_id',
+                    examTitle: '$title',
+                    totalParticipants: 1,
+                    activeParticipants: { $size: '$activeSessions' },
+                    completedParticipants: { $size: '$finalResults' },
+                    suspensions: { $add: ['$sessionSusp', '$resultSusp'] },
+                    totalViolations: '$sessionVol',
+                    flaggedStudents: {
+                        $size: {
+                            $setUnion: [
+                                { $map: { input: { $filter: { input: '$activeSessions', as: 's', cond: { $gt: ['$$s.violationCount', 0] } } }, as: 's', in: '$$s.studentId' } },
+                                { $map: { input: { $filter: { input: '$finalResults', as: 'r', cond: { $eq: ['$$r.isSuspended', true] } } }, as: 'r', in: '$$r.studentId' } }
+                            ]
+                        }
+                    },
+                    lastIncidentAt: { $max: ['$updatedAt', '$activeSessions.lastSyncTime'] }
                 }
             },
-            { $sort: { cheatingRiskScore: -1 } }
+            { $sort: { totalParticipants: -1 } }
         ]);
 
-        res.json(stats);
+        // Global Summary
+        const globalStats = stats.reduce((acc, curr) => ({
+            totalParticipants: acc.totalParticipants + curr.totalParticipants,
+            totalViolations: acc.totalViolations + curr.totalViolations,
+            totalSuspensions: acc.totalSuspensions + curr.suspensions
+        }), { totalParticipants: 0, totalViolations: 0, totalSuspensions: 0 });
+
+        const integrityScore = globalStats.totalParticipants > 0 
+            ? Math.max(0, 100 - (globalStats.totalViolations / globalStats.totalParticipants) * 10) 
+            : 100;
+
+        res.json({
+            exams: stats,
+            global: {
+                totalParticipants: globalStats.totalParticipants,
+                totalViolations: globalStats.totalViolations,
+                totalSuspensions: globalStats.totalSuspensions,
+                integrityScore: Math.round(integrityScore),
+                systemEfficacy: globalStats.totalViolations > 0 ? Math.round((globalStats.totalSuspensions / globalStats.totalViolations) * 100) : 100
+            }
+        });
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }

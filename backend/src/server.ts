@@ -2,6 +2,7 @@ console.log('Starting SOEMS Backend...');
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import mongoSanitize from 'express-mongo-sanitize';
 import dotenv from 'dotenv';
 import connectDB from './config/db';
 import { seedAdmin, adminRoutes } from './modules/system/systemModule';
@@ -80,6 +81,9 @@ app.use(helmet({
     },
 }));
 
+// Apply global NoSQL Injection sanitizer
+app.use(mongoSanitize());
+
 
 // Dynamic CORS configuration
 const corsOptions: cors.CorsOptions = {
@@ -152,15 +156,12 @@ app.get('/', (req: Request, res: Response) => {
     res.send('SOEMS Backend is running!');
 });
 
+import { globalErrorHandler } from './middleware/errorMiddleware';
+
+// ... (other imports)
+
 // Error handling middleware
-app.use((err: any, req: Request, res: Response, next: any) => {
-    const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-    res.status(statusCode);
-    res.json({
-        message: err.message,
-        stack: process.env.NODE_ENV === 'production' ? null : err.stack,
-    });
-});
+app.use(globalErrorHandler);
 
 const server = http.createServer(app);
 const io = initSocket(server);
